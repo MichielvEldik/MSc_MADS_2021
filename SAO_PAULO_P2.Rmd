@@ -17,6 +17,7 @@ library(lubridate)
 library(tm)
 library(stringr)
 library(NLP)
+library(SnowballC)
 ```
 
 ```{r Load data}
@@ -154,11 +155,34 @@ tokenized <- str_split(geo_sao_paolo_df$review_comment_message, " ")
 Stemming is more appropriate. 
 
 ``` {r }
-stemDocument(tokenized[[1])
 to_stem <- tokenized[[1]]
 to_stem
 stemDocument(to_stem, language = "pt")
 ```
+
+``` {r }
+stem <- wordStem(to_stem, language = "portuguese")
+```
+
+
+``` {r }
+full_char <- paste(stem, collapse = " ")
+full_char
+```
+
+
+
+``` {r }
+
+```
+
+
+
+```{r }
+receb <- geo_sao_paolo_df %>% 
+  filter(grepl('receb', review_comment_message))
+```
+
 
 # __Lemmatization__
 
