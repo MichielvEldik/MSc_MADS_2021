@@ -12,11 +12,7 @@ output:
 library(dplyr)
 library(kableExtra)
 library(car)
-library(tidytext)
 library(lubridate)
-library(tm)
-library(stringr)
-library(NLP)
 ```
 
 ```{r Load data}
@@ -27,36 +23,10 @@ input <- read.csv("sao_paulo_state_dataset.csv")
 geo_sao_paolo_df <- input
 ```
 
-# __1. Text data pre-processing__
-## __1.0. what we have & what are our goals__
+# __1. Text data pre processing__
 
-__We have:__
-
-* Portuguese;
-* Short phrases, in many cases just single words, which can limit 
-the utility of certain approaches;
-* Context is already known (Indicated by quantitative score), 
-which can be used to our advantage;
-
-__What we want:__
-
-* Be able to distinguish between _product-related_ and _freight-related_ issues.
-* Gain an understanding on characteristics of reviews, such as...
-  + Length
-  + Lexicon
-  + etc. 
-
-## __1.0. Data type__
-Currently, the comments and titles are a factor data type. 
-The general preference for text analysis is character string representation. 
-In some cases it's even required, so let's go ahead and change that!
-``` {r }
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
-  mutate(
-    review_comment_message = as.character(review_comment_message),
-    review_comment_title = as.character(review_comment_title)
-        )
-```
+* First clean
+* Then derived variables
 
 ## __1.1. Standardization__
 
@@ -81,146 +51,61 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
         )
 ```
 
-## __Tidytext__
-
-https://en.wikipedia.org/wiki/Portuguese_orthography
-
-Portuguese language rarely uses double letters apart from:
-
-* ss
-* rr
-
-
-
-### Bunch of cleaning
-
-``` {r }
-geo_sao_paolo_df  <- geo_sao_paolo_df %>%
-  mutate(
-    # Remove punctuation 
-    review_comment_message = gsub("[[:punct:]]+"," ", review_comment_message),
-    # Remove digits
-    review_comment_message = gsub("[[:digit:]]+"," ", review_comment_message),
-    # remove double characters except ss and rr
-    review_comment_message = gsub("([a-q t-z])\\1+", "\\1", 
-                                       review_comment_message, 
-                                       perl = TRUE),
-    # Remove these next line \n things
-    review_comment_message = str_remove_all(
-      review_comment_message, "\\n"),
-    # Between words white spaces
-    review_comment_message = str_replace_all(
-      review_comment_message, "\\s+", " "),
-    # Trailing white spaces
-    review_comment_message = str_replace_all(
-      review_comment_message, "\\s*$", ""),
-    # leading white spaces
-    review_comment_message = str_replace_all(
-      review_comment_message, "^\\s*", "")
-         )
-```
-
-
-### Remove extremely short words 
-
-``` {r }
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
-  mutate(
-    
-    review_comment_message = ifelse(
-      nchar(review_comment_message) == 1,
-      "",
-      review_comment_message),
-    
-    review_comment_message = ifelse(
-      nchar(review_comment_message) == 2 & review_comment_message != "ok",
-      "",
-      review_comment_message)
-        )
-```
-
-# __Tokenization__
-
-``` {r }
-tokenized <- str_split(geo_sao_paolo_df$review_comment_message, " ")
-```
-
-
-# __Stemming vs lemmatization__
-
-* Lemmatization: More sophisticated, reqwuires more effort and knowledge
-* Stemming: More straightforward, not as sophisticated.
-
-Stemming is more appropriate. 
-
-``` {r }
-stemDocument(tokenized[[1])
-to_stem <- tokenized[[1]]
-to_stem
-stemDocument(to_stem, language = "pt")
-```
-
-# __Lemmatization__
-
-
-
-
-
-# __cool packages__
-
-https://hub.packtpub.com/9-useful-r-packages-for-nlp-text-mining/
-
-``` {r}
-library(languageR) # lexical stuff cool
-
-```
-
-# Frequencies
-
-``` {r}
-text <- as.character(geo_sao_paolo_df$review_comment_message)
-
-text_df <- tibble(line = 1:41638, text = text)
-
-
-new_text_df <- text_df %>%
-  unnest_tokens(word, text)
-
-new_text_df %>%
-  count(word, sort = TRUE)
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(stemming and tokenization first!)
-(Use context, so do this after knowledge of late, early, on time)
-``` {r }
-
-stop_words <- c(
-  "e", "o", "a", "do", "de", "que", "no", "um", 
-)
-
-freight_words <- c(
-  "chegou", "recebi", "entrega", "prazo"
-)
-
-```
 ## 1.2. Punctuation
 I do want to keep track of these. It's interesting to know about
 
 * Question marks
 * Exclamation marks
+
+
+``` {r }
+# repl_python()
+# conda_create("r-reticulate")
+# py_install("pandas")
+# py_install("spacy")
+```
+
+``` {r }
+library(reticulate)
+use_python("/usr/bin/python3.8")
+# virtualenv_create("r-reticulate")
+# virtualenv_install("r-reticulate", "scipy")
+# virtualenv_install("r-reticulate", "spacy")
+use_virtualenv("r-reticulate")
+scipy <- import("pandas")
+spacy <- import("spacy")
+```
+
+``` {python  }
+import pandas as pd
+import spacy
+```
+
+``` {python  }
+f = pd.read_csv('sao_paulo_state_dataset.csv', index_col=0)
+```
+
+``` {python }
+print(f[0:4])
+```
+
+``` {python }
+nlp = spacy.load("pt_core_news_sm")
+```
+
+
+
+
+
+``` {python }
+def foo(x):
+  if x == 0:
+    print("hoi")
+  else:
+    print("hi")
+
+foo(20)
+``` 
 
 
 
