@@ -1,0 +1,180 @@
+---
+title: "Internel_data_cleansing"
+author: "Michiel van Eldik"
+date: "4/2/2021"
+output: html_document
+---
+
+# 0. Prologue
+```{r libraries message=FALSE}
+library(dplyr)
+library(kableExtra)
+library(car)
+library(lubridate)
+```
+
+```{r Load data}
+input <- read.csv("sao_paulo_state_dataset.csv")
+```
+
+``` {r create variable}
+geo_sao_paolo_df <- input
+```
+
+# 1. Text data preprocessing
+
+* First clean
+* Then derived variables
+
+## 1.1. Standardization
+
+* lowercase
+* Change encoding to English-letters only (ASCII)
+
+``` {r standardization}
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    review_comment_message = tolower(
+                                iconv(
+                                  review_comment_message, 
+                                  to = "ASCII//TRANSLIT"
+                                     )
+                                    ),
+    review_comment_title = tolower(
+                              iconv(
+                                review_comment_title,
+                                to = "ASCII//TRANSLIT"
+                                   )
+                                  )
+        )
+```
+
+## 1.2. Punctuation
+I do want to keep track of these. It's interesting to know about
+
+* Question marks
+* Exclamation marks
+
+
+
+
+## 1.3. Numbers
+
+
+## 1.4. Misc weird stuff
+
+## 1.4. Tokenization 
+
+## 1.5. Stop words
+
+
+Use Portuguese stopwords library
+
+## 1.6. Lemmatization 
+
+
+
+
+
+## explore text data
+Basically I want an answer to whether which comments are noise and which
+ones can be taken seriously.
+
+### words with one or multiple expression signs (?, !, *, ...)
+
+``` {r }
+# is there a dot?
+try <- geo_sao_paolo_df[grep(".", geo_sao_paolo_df$review_comment_message),]
+
+try <- geo_sao_paolo_df[grep("!", geo_sao_paolo_df$review_comment_message),]
+
+```
+
+### Comments with numbers 
+
+### Words with no meaning ()
+
+### single words
+
+### short comments vs actual stories that are useful 
+length > xxx
+
+# Dates data 
+``` {r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    review_creation_date = as.Date(review_creation_date,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    review_answer_timestamp = as.Date(review_answer_timestamp,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_purchase_timestamp = as.Date(order_purchase_timestamp, 
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_approved_at = as.Date(order_approved_at,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_delivered_carrier_date = as.Date(order_delivered_carrier_date,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_delivered_customer_date = as.Date(order_delivered_customer_date,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_estimated_delivery_date = as.Date(order_estimated_delivery_date,
+                                   format = "%Y-%m-%d %H:%M:%S")
+         )
+```
+
+time relative variables
+``` {r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    diff_est_deliv = order_estimated_delivery_date - order_delivered_customer_date,
+    diff_pur_est  = order_estimated_delivery_date - order_purchase_timestamp,
+    diff_pur_deliv = order_delivered_customer_date - order_purchase_timestamp,
+    diff_rev_crea_ans = review_creation_date - review_answer_timestamp,
+    diff_rev_est_ans = order_estimated_delivery_date - review_answer_timestamp,
+    diff_rev_deliv_ans = order_delivered_customer_date - review_answer_timestamp
+         )
+```
+
+weekend dummies 
+``` {r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    # show weekday of a date
+    review_sent_dow = wday(review_creation_date, label = TRUE),
+    review_answer_dow = wday(review_answer_timestamp, label = TRUE),
+    
+    # Dummy variable weekend yes/no
+    review_sent_wknd = ifelse(
+      review_sent_dow == 'zo' | review_sent_dow == 'za', 1, 0),
+    review_answer_wknd = ifelse(
+      review_answer_dow == 'zo' | review_answer_dow == 'za', 1, 0)
+         )
+```
+
+Year dummies 
+``` {r }
+geo_sao_paolo_df<- geo_sao_paolo_df %>%
+  mutate(
+    y_2016 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0),
+    y_2017 = ifelse(year(order_purchase_timestamp) == '2017', 1, 0),
+    y_2018 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0)
+         )
+```
+
+# Duplicates in customer cities
+
+``` {r customer cities}
+geo_sao_paolo_df$customer_city
+
+```
+
+
+# Past behaviour of customer
+
+* previous recensy 
+* frequency
+* new_yes/no
+
+
+
+
+
+

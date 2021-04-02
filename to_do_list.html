@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>To-do List</title>
+    </head>
+    
+    <body>
+        <h1>To-do list</h1>
+        
+        <h2>Things that should happen in / before the merging section.</h2>
+          		<ul>
+          		   <li> Create a little plot for both issues regarding order_id and review_id merge to make it visualized.</li> 
+			          <li> Compare arrival and approximated delivery times, make a variable that indicates tardiness</li> 
+		          	<li> Variable that shows the actual shipping time per review</li> 
+        	      <li> Evaluate both and assess whether it's valuable to do encorporate this into the algorithm that links review_ids with multiple order_ids. </li> 
+        	      <li> Or you could just indicated a ANY_WAS_LATE variable to connect to that review_id. (Try on smaller scale first).</li> 
+		          </ul>
+		          
+		    <h2> Things for section 2, initial cleansing and transformations:</h2>
+          		<ul>
+          		   <li> Full geographic merge likely will be difficult due to double keys and stuff. </li>
+          		  <li> missingness</li> 
+          		  <li> outliers </li> 
+          		  <li> top-2-box discretization. </li> 
+          		  <li> IMPORTANT: Classify delivery related using Naive Bayes: all uncertain ones do by hand. Create labels with Regex. sanity check. </li> 
+          		  <li> Indication of review timestamps that happened before confirmed delivery (or something) </li> 
+          		  <li> Product category classifications: experience good, complexity, sensitivity, shopping good, outlier goods like cars (high risk). </li> 
+          		  <li> Both matter for review sentiment: if you receive in advance AND if you receive too late. </li> 
+          		  <li> Realize that freight approximation time is calculated also on basis of product qualities (he says in Answer section): So don't be comparing apples and pears and make sure that if you compare freight approximation times or ffreight times / values in general across regions, make sure that they are approximately buying the same stuff. </li> 
+          		  <li> Decide whether a one-word comment is really allowed to be counted as a written review. especially because of message length. </li> 
+			          <li> Maybe do this with an additional </li> 
+		          	<li> Variable that shows the actual shipping time per review</li> 
+        	      <li>  </li> 
+        	      <li> Or you could just indicated a ANY_WAS_LATE variable to connect to that review_id. (Try on smaller scale first).</li> 
+		          </ul>
+		          
+        <h2>Basic geospatial insights before anything (visualization) </h2>
+		          <ul>
+		            <li> Population density, ubranicity </li> 
+		            <li> literacy rates and stuff (show multicollinearity) </li>
+		            <li> expected delivery times, where are they higher? </li>
+		            <li> ratio of expected / actualy delivery timestamps: </li>
+		            <li> Where are frieght delay complaints high? maybe in the city because delivery times are shorter so easier to get delayed.</li>
+		            <li> multi-item purchases, where are they higher, relevant as it's correlated with review probability. </li>
+		            <li> product categories per region. </li>
+		            <li> when filtering out freight issues: how is the general sentiment? including top2box </li>
+		            <li> When filtering out frieght issues: how is general review rate.  </li>
+		            <li> When filtering IN freigth issues: how is this different? </li>
+		    
+		            
+		          </ul>
+		          
+		          
+		          
+		    
+		    <h2>External merge / spatial analyses </h2>
+		          <ul>
+          <li> fucking sanity check!!!!!!! on shpppfilllllle mergeee + ALSO SECOND MERGE ON MUNIC NAME</li>
+					<li> <b>REALLY IMPORTANT: ECOLOGICAL FALLACY:</b> If HDI is on municipality / neighborhood level whilst other data at individual level, we can only make statements on a municipality / neighborhood level, <b>NOT</b> at an individual level. Although you may be able (emphasis on 'maybe') to say, "people from municipalities with x HDI tend to..., etc." because in this way there is no direct cuasal claim between review rate and HDI, it's indirect.</li>
+					<li> <b>Important</b> for count data, a mistake can also be made by not taking into account the population of that area. E.g., if there are many reviews in poor areas, you can't immediately claim cause and effect, you have to think of how many people live in that area. Still, Olist penetration may have something to do with that as well.</li>
+					<li> website to see common pitfalls: https://mgimond.github.io/Spatial/pitfalls-to-avoid.html </li>
+					<li> Sao Paulo shapefile from Worldbank, maybe more here as well: https://datacatalog.worldbank.org/dataset/sao-paulo-municipalities </li>
+
+					<li> Municipal data shepfile website Berkley nice: https://geodata.lib.berkeley.edu/catalog/stanford-kn783md3121 </li>
+		            <li> General statistics: differences in numbers of observations + unequal variances + nonparametrics </li> 
+		            <li> Municipality propensity score matching? Look up some theory on this! </li> 
+		            <li> HDI discretization can be done following official guidelines </li> 
+          		    <li> Fallacies in Spatial Analyses </li> 
+          		    <li> Shortcomings of Human Development Index </li> 
+          		    <li> Shortcomings of Municipial-level: Proximity of inequality. e.g., cobana and rocinha in RJ Sul. </li>
+          		    <li> Comparing apples and pears: leave out big cities for some analyses </li>
+          		    <li> External data: internet quality per region </li>
+          		    <li> The age distribution problem </li>
+          		    <li> The reward system problem: Does Olist offer potential rewards for WRITTEN reviews? Then the results actually make sense but we still get a bias in the data. Check with OLIST on this. </li>
+          		    <li>  Contact Olist.</li>
+          		    <li>  Delivery time approximations: are delivery times approximated more conservatively thus longer delivery times are communicated to customers that live in rural or poor neighborhoods? </li>
+          		    <li>  Temporal account --> Can make a difference, especially weekends. </li>
+          		    <li>  Time series account: Prior experience account: How many (frequency), how recently (recency), and what was the sentiment (sentiment)?</li>
+          		    <li>  Would be cool if we can actually predict future commenting behaviour of a customer!</li>
+          		    <li> The comment on delivery instead of product problem</li>
+          		    <li> WATCH OUT FOR ITEM_COUNT = endogeneity as it leads to higher probability of a review</li> 
+          		    <li> WATCH OUT FOR ITEM_COUNT </li> 
+			        <li> How to make interactive map with shapefile overlay of HDI (just like ATLAS page) </li> 
+		          	<li> Instructions for ATLAS page extractiong: location type = state, layer = county.</li> 
+        	        <li> Maybe a mixed effect due to different intercepts? Not sure about this though.  </li> 
+        	        <li> Or you could just indicated a ANY_WAS_LATE variable to connect to that review_id. (Try on smaller scale first).</li> 
+		          
+				  </ul>
+		    
+		    
+		    <h2>Statistical techniques </h2>
+		          <ul>
+		            <li> Techniques to deal with multicolinnearity: Wieghted Lasso Geographic regression</li> 
+		            <li> Bayesian Networks are nice for multicollinearity I think. </li> 
+		            <li> Good area of literature = Pearl Bayes Nets (legend in the game) </li> 
+		            <li> Bayesian Inference: Look into the book that's really nice: John Kruschke Bayesian Analysis tutorial with R, STAN, and JAGS. </li> 
+		            <li> hierarchical dynamic bayesian network to capture recency, frequency, and past sentiment.   </li>
+		            <li> How cool is it if we can predict future commenting behaviour based on past sentiments and comments?   </li>
+					<li> Paper on GIS and Bayes: https://www.norsys.com/GIS/Stassopoulou98.pdf </li>		            
+		          </ul>
+		    
+		    <h2> General things to write about in thesis:</h2>
+		    
+		          <ul>
+          		  <li> Economic differences in regions, making it difficult to compare HDI and culture seperately. </li> 
+			          <li> However, every cultural region does seem to have its poorer and richer areas, so with propensity score matching we may still be able to compare stuff. Also take into account rurality as well. </li> 
+		          	<li> This link, especially notable characteristics, https://en.wikipedia.org/wiki/Regions_of_Brazil </li> 
+        	      <li>  Show that Bayesian Networks integrate well with GIS (geographical information systems) </li> 
+        	      <li> sentiment analysis as well and stuff. </li> 
+        	      <li> Explicit on Geert Hofstede things. </li> 
+        	      <li> Find out cool stuff for HTML and Rmarkdown cookbook with scrollable css stuff.</li> 
+        	      <li> simple guide to make this look nice: https://itnext.io/simple-web-layout-with-css-grid-ec6be5086531</li>
+        	      <li> maybe include some background and images of Brazil</li>
+				  <li> Sidebar navigation nice tutorial: https://community.rstudio.com/t/toc-or-side-menu-in-rpubs/21576/2 </li>
+				  <li> site with geocode converter and references: https://mygeodata.cloud/cs2cs/ </li>
+
+		          </ul>
+    </body>
+</html>
