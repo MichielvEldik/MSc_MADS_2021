@@ -11,7 +11,7 @@
 
 <meta name="author" content="Michiel van Eldik" />
 
-<meta name="date" content="2021-04-02" />
+<meta name="date" content="2021-04-03" />
 
 <title>Internel_data_cleansing</title>
 
@@ -365,7 +365,7 @@ summary {
 
 <h1 class="title toc-ignore">Internel_data_cleansing</h1>
 <h4 class="author">Michiel van Eldik</h4>
-<h4 class="date">2021-04-02</h4>
+<h4 class="date">2021-04-03</h4>
 
 </div>
 
@@ -374,17 +374,20 @@ summary {
 <li><a href="#prologue"><strong>0. Prologue</strong></a></li>
 <li><a href="#text-data-pre-processing"><strong>1. Text data pre-processing</strong></a><ul>
 <li><a href="#what-we-have-what-are-our-goals"><strong>1.0. what we have &amp; what are our goals</strong></a></li>
+<li><a href="#data-type"><strong>1.1. Data type</strong></a></li>
+<li><a href="#remove-numbers-punctuations-doubles"><strong>1.2. Remove numbers, punctuations, doubles</strong></a></li>
+<li><a href="#remove-extremely-short-words"><strong>1.3. Remove extremely short words</strong></a></li>
+<li><a href="#to-lower-case"><strong>1.4. To lower case</strong></a></li>
+<li><a href="#lemmatization"><strong>1.5. Lemmatization</strong></a><ul>
+<li><a href="#lemmatization-vs.-stemming"><strong>1.5.0. Lemmatization vs. stemming</strong></a></li>
+</ul></li>
+</ul></li>
+<li><a href="#whitespaces-hold-it-for-a-minute-maybe-not-needed.">whitespaces hold it for a minute, maybe not needed.</a><ul>
 <li><a href="#standardization"><strong>1.1. Standardization</strong></a></li>
-<li><a href="#stuff">Stuff</a></li>
-<li><a href="#punctuation">1.2. Punctuation</a></li>
-<li><a href="#numbers">1.3. Numbers</a></li>
-<li><a href="#misc-weird-stuff">1.4. Misc weird stuff</a></li>
-<li><a href="#tokenization">1.4. Tokenization</a></li>
-<li><a href="#stop-words">1.5. Stop words</a></li>
-<li><a href="#lemmatization">1.6. Lemmatization</a></li>
+</ul></li>
+<li><a href="#frequencies">Frequencies</a><ul>
 <li><a href="#explore-text-data">explore text data</a><ul>
 <li><a href="#words-with-one-or-multiple-expression-signs">words with one or multiple expression signs (?, !, *, …)</a></li>
-<li><a href="#comments-with-numbers">Comments with numbers</a></li>
 <li><a href="#words-with-no-meaning">Words with no meaning ()</a></li>
 <li><a href="#single-words">single words</a></li>
 <li><a href="#short-comments-vs-actual-stories-that-are-useful">short comments vs actual stories that are useful</a></li>
@@ -402,9 +405,16 @@ summary {
 library(kableExtra)
 library(car)
 library(tidytext)
-library(lubridate)</code></pre>
+library(lubridate)
+library(tm)
+library(stringr)
+library(NLP)
+library(SnowballC)
+library(koRpus)
+library(koRpus.lang.pt)</code></pre>
 <pre class="r"><code>input &lt;- read.csv(&quot;sao_paulo_state_dataset.csv&quot;)</code></pre>
-<pre class="r"><code>geo_sao_paolo_df &lt;- input</code></pre>
+<pre class="r"><code>geo_sao_paolo_df &lt;- input
+sanity_geo_sao_paulo &lt;- input</code></pre>
 </div>
 <div id="text-data-pre-processing" class="section level1">
 <h1><strong>1. Text data pre-processing</strong></h1>
@@ -425,10 +435,179 @@ library(lubridate)</code></pre>
 <li>Lexicon</li>
 <li>etc.</li>
 </ul></li>
-<li>First clean</li>
-<li>Then derived variables</li>
 </ul>
 </div>
+<div id="data-type" class="section level2">
+<h2><strong>1.1. Data type</strong></h2>
+<p>Currently, the comments and titles are a factor data type. The general preference for text analysis is character string representation. In some cases it’s even required, so let’s go ahead and change that!</p>
+<pre class="r"><code>geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
+  mutate(
+    review_comment_message = as.character(review_comment_message),
+    review_comment_title = as.character(review_comment_title)
+        )</code></pre>
+</div>
+<div id="remove-numbers-punctuations-doubles" class="section level2">
+<h2><strong>1.2. Remove numbers, punctuations, doubles</strong></h2>
+<pre class="r"><code>geo_sao_paolo_df  &lt;- geo_sao_paolo_df %&gt;%
+  mutate(
+    # Remove punctuation 
+    review_comment_message = gsub(&quot;[[:punct:]]+&quot;,&quot; &quot;, review_comment_message),
+    # Remove digits
+    review_comment_message = gsub(&quot;[[:digit:]]+&quot;,&quot; &quot;, review_comment_message),
+    # remove double characters except ss and rr
+    review_comment_message = gsub(&quot;([a-q t-z])\\1+&quot;, &quot;\\1&quot;, 
+                                       review_comment_message, 
+                                       perl = TRUE),
+    # Get rid of line break strings
+    review_comment_message = gsub(&quot;\r?\n|\r&quot;, &quot; &quot;, review_comment_message)
+  )
+
+# Same for title
+geo_sao_paolo_df  &lt;- geo_sao_paolo_df %&gt;%
+  mutate(
+    # Remove punctuation 
+    review_comment_title = gsub(&quot;[[:punct:]]+&quot;,&quot; &quot;, review_comment_title),
+    # Remove digits
+    review_comment_title = gsub(&quot;[[:digit:]]+&quot;,&quot; &quot;, review_comment_title),
+    # remove double characters except ss and rr
+    review_comment_title = gsub(&quot;([a-q t-z])\\1+&quot;, &quot;\\1&quot;, 
+                                       review_comment_title, 
+                                       perl = TRUE),
+    # Get rid of line break strings
+    review_comment_title = gsub(&quot;\r?\n|\r&quot;, &quot; &quot;, review_comment_title)
+  )</code></pre>
+</div>
+<div id="remove-extremely-short-words" class="section level2">
+<h2><strong>1.3. Remove extremely short words</strong></h2>
+<pre class="r"><code>geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
+  mutate(
+    
+    review_comment_message = ifelse(
+      nchar(review_comment_message) == 1,
+      &quot;&quot;,
+      review_comment_message),
+    
+    review_comment_message = ifelse(
+      nchar(review_comment_message) == 2 &amp; review_comment_message != &quot;ok&quot;,
+      &quot;&quot;,
+      review_comment_message)
+        )</code></pre>
+</div>
+<div id="to-lower-case" class="section level2">
+<h2><strong>1.4. To lower case</strong></h2>
+<pre class="r"><code>geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
+  mutate(
+    review_comment_message = tolower(review_comment_message),
+    review_comment_title = tolower(review_comment_title)
+        )</code></pre>
+</div>
+<div id="lemmatization" class="section level2">
+<h2><strong>1.5. Lemmatization</strong></h2>
+<div id="lemmatization-vs.-stemming" class="section level3">
+<h3><strong>1.5.0. Lemmatization vs. stemming</strong></h3>
+<p>The choice was made to use lemmatization over stemming.</p>
+<ul>
+<li>Compared to English the morphology of Portuguese is more complex, which runs the risk of over- and understemming.</li>
+<li>Although lemmatization is more computationally complex, I only need to go through it once as this is a one-shot research project.</li>
+<li>Lemmatization generally provides better results, espically in inflection-rich languages like Spanish or Portuguese.</li>
+</ul>
+<p>Lemmatization will be done in <strong>Python</strong> using _spaCy__ because:</p>
+<ul>
+<li>Options to do it <em>easily</em> (in my eyes) in R are limited. In <strong>spaCy</strong>, I don’t even have to turn it into a corpus.</li>
+<li>the <strong>spaCy</strong> library offers trained models and pipelines that have exhibited above average performance in <a href="https://lars76.github.io/2018/05/08/portuguese-lemmatizers.html">recent tests for the Portuguese language.</a></li>
+</ul>
+<p>First, export current data - with only the necessary columns - to csv. This csv will be used in the Python script.</p>
+<pre class="r"><code>to_write &lt;- geo_sao_paolo_df %&gt;%
+  select(review_id, review_comment_message)
+write.csv(to_write, &quot;for_spacy.csv&quot;, row.names = FALSE)</code></pre>
+<p>The lemmatization in Python.</p>
+<pre class="python"><code>import spacy
+import pandas as pd
+import math
+
+# Load portuguese pipeline
+nlp = spacy.load(&quot;pt_core_news_sm&quot;)
+
+# Loaad data that I exported from the current Rmarkdown file
+df = pd.read_csv(&#39;/home/mitchy123/Documents/MSc_MADS_2021/for_spacy.csv&#39;)
+
+# Assign new variable (not that functional, but helps when experimenting)
+sub_df = df
+
+# initialize empty list
+lemma_listje = []
+
+# Instruction of how data are seperated
+# As we are using sentences, it is seperated with spaces
+seperator = &quot; &quot;
+
+# For loop that lemmatizes each word of each comment
+for i in sub_df.iloc[:,1][sub_df.iloc[:,1].notna() == True]:
+    i = nlp(i)
+    interim_listje = []
+    for word in i:
+        interim_listje.append(word.lemma_)
+    interim_listje = seperator.join(interim_listje)
+    lemma_listje.append(interim_listje)
+
+# Add indexes of rows where there is not NaN
+nan_indices = sub_df.loc[pd.notna(sub_df[&quot;review_comment_message&quot;]), :].index
+
+# Create dataframe to export
+d = {&#39;sentence&#39;:lemma_listje, &#39;index&#39;:nan_indices}
+new_df = pd.DataFrame(d)
+
+# Export to csv, which will be used in this current Rmarkdown file again
+new_df.to_csv(&#39;lemmatized.csv&#39;)</code></pre>
+<p>Loading and merging to the df we were working with.</p>
+<pre class="r"><code>lemmatized &lt;- read.csv(&#39;lemmatized.csv&#39;)
+
+indiced_gsp &lt;- geo_sao_paolo_df
+indiced_gsp$index &lt;- c(0: (nrow(indiced_gsp) - 1))
+
+geo_sao_paolo_df &lt;- merge(indiced_gsp, lemmatized, 
+                  by.x = &#39;index&#39;,
+                  by.y = &#39;index&#39;,
+                  all.x = TRUE)
+
+geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
+  mutate(review_comment_message = sentence) %&gt;%
+  select(
+    - X,
+    - sentence,
+    - index
+        )</code></pre>
+<pre class="r"><code>indiced_gsp &lt;- geo_sao_paolo_df
+indiced_gsp$index &lt;- c(0: (nrow(indiced_gsp) - 1))</code></pre>
+<pre class="r"><code>geo_sao_paolo_df &lt;- merge(indiced_gsp, lemmatized, 
+                  by.x = &#39;index&#39;,
+                  by.y = &#39;index&#39;,
+                  all.x = TRUE)
+
+geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
+  mutate(review_comment_message = sentence) %&gt;%
+  select(
+    - X,
+    - sentence
+        )</code></pre>
+</div>
+</div>
+</div>
+<div id="whitespaces-hold-it-for-a-minute-maybe-not-needed." class="section level1">
+<h1>whitespaces hold it for a minute, maybe not needed.</h1>
+<pre class="r"><code>    # Remove these next line \n things
+    review_comment_message = str_remove_all(
+      review_comment_message, &quot;\\n&quot;),
+    # Between words white spaces
+    review_comment_message = str_replace_all(
+      review_comment_message, &quot;\\s+&quot;, &quot; &quot;)#,
+    # Trailing white spaces
+    #review_comment_message = str_replace_all(
+    #  review_comment_message, &quot;\\s*$&quot;, &quot;&quot;),
+    # leading white spaces
+    #review_comment_message = str_replace_all(
+    #  review_comment_message, &quot;^\\s*&quot;, &quot;&quot;)
+         )</code></pre>
 <div id="standardization" class="section level2">
 <h2><strong>1.1. Standardization</strong></h2>
 <ul>
@@ -451,8 +630,9 @@ library(lubridate)</code></pre>
                                   )
         )</code></pre>
 </div>
-<div id="stuff" class="section level2">
-<h2>Stuff</h2>
+</div>
+<div id="frequencies" class="section level1">
+<h1>Frequencies</h1>
 <pre class="r"><code>text &lt;- as.character(geo_sao_paolo_df$review_comment_message)
 
 text_df &lt;- tibble(line = 1:41638, text = text)
@@ -463,45 +643,28 @@ new_text_df &lt;- text_df %&gt;%
 
 new_text_df %&gt;%
   count(word, sort = TRUE)</code></pre>
-<pre><code>## # A tibble: 9,827 x 2
-##    word        n
-##    &lt;chr&gt;   &lt;int&gt;
-##  1 e        8625
-##  2 o        7626
-##  3 produto  7458
-##  4 a        5075
-##  5 nao      4750
-##  6 do       4642
-##  7 de       4587
-##  8 prazo    3498
-##  9 que      3414
-## 10 muito    3225
-## # … with 9,817 more rows</code></pre>
-</div>
-<div id="punctuation" class="section level2">
-<h2>1.2. Punctuation</h2>
-<p>I do want to keep track of these. It’s interesting to know about</p>
-<ul>
-<li>Question marks</li>
-<li>Exclamation marks</li>
-</ul>
-</div>
-<div id="numbers" class="section level2">
-<h2>1.3. Numbers</h2>
-</div>
-<div id="misc-weird-stuff" class="section level2">
-<h2>1.4. Misc weird stuff</h2>
-</div>
-<div id="tokenization" class="section level2">
-<h2>1.4. Tokenization</h2>
-</div>
-<div id="stop-words" class="section level2">
-<h2>1.5. Stop words</h2>
-<p>Use Portuguese stopwords library</p>
-</div>
-<div id="lemmatization" class="section level2">
-<h2>1.6. Lemmatization</h2>
-</div>
+<pre><code>## # A tibble: 6,174 x 2
+##    word         n
+##    &lt;chr&gt;    &lt;int&gt;
+##  1 &lt;NA&gt;     25066
+##  2 o        17512
+##  3 produto   7942
+##  4 e         6627
+##  5 ser       5539
+##  6 entregar  5000
+##  7 do        4647
+##  8 de        4590
+##  9 não       4167
+## 10 prazo     3538
+## # … with 6,164 more rows</code></pre>
+<p>(stemming and tokenization first!) (Use context, so do this after knowledge of late, early, on time)</p>
+<pre class="r"><code>stop_words &lt;- c(
+  &quot;e&quot;, &quot;o&quot;, &quot;a&quot;, &quot;do&quot;, &quot;de&quot;, &quot;que&quot;, &quot;no&quot;, &quot;um&quot; 
+)
+
+freight_words &lt;- c(
+  &quot;chegou&quot;, &quot;recebi&quot;, &quot;entrega&quot;, &quot;prazo&quot;
+)</code></pre>
 <div id="explore-text-data" class="section level2">
 <h2>explore text data</h2>
 <p>Basically I want an answer to whether which comments are noise and which ones can be taken seriously.</p>
@@ -511,9 +674,6 @@ new_text_df %&gt;%
 try &lt;- geo_sao_paolo_df[grep(&quot;.&quot;, geo_sao_paolo_df$review_comment_message),]
 
 try &lt;- geo_sao_paolo_df[grep(&quot;!&quot;, geo_sao_paolo_df$review_comment_message),]</code></pre>
-</div>
-<div id="comments-with-numbers" class="section level3">
-<h3>Comments with numbers</h3>
 </div>
 <div id="words-with-no-meaning" class="section level3">
 <h3>Words with no meaning ()</h3>

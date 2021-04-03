@@ -18,6 +18,9 @@ library(tm)
 library(stringr)
 library(NLP)
 library(SnowballC)
+library(koRpus)
+library(koRpus.lang.pt)
+
 ```
 
 ```{r Load data}
@@ -26,6 +29,7 @@ input <- read.csv("sao_paulo_state_dataset.csv")
 
 ``` {r create variable}
 geo_sao_paolo_df <- input
+sanity_geo_sao_paulo <- input
 ```
 
 # __1. Text data pre-processing__
@@ -47,7 +51,7 @@ __What we want:__
   + Lexicon
   + etc. 
 
-## __1.0. Data type__
+## __1.1. Data type__
 Currently, the comments and titles are a factor data type. 
 The general preference for text analysis is character string representation. 
 In some cases it's even required, so let's go ahead and change that!
@@ -59,41 +63,7 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
         )
 ```
 
-## __1.1. Standardization__
-
-* lowercase
-* Change encoding to English-letters only (ASCII)
-
-``` {r standardization}
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
-  mutate(
-    review_comment_message = tolower(
-                                iconv(
-                                  review_comment_message, 
-                                  to = "ASCII//TRANSLIT"
-                                     )
-                                    ),
-    review_comment_title = tolower(
-                              iconv(
-                                review_comment_title,
-                                to = "ASCII//TRANSLIT"
-                                   )
-                                  )
-        )
-```
-
-## __Tidytext__
-
-https://en.wikipedia.org/wiki/Portuguese_orthography
-
-Portuguese language rarely uses double letters apart from:
-
-* ss
-* rr
-
-
-
-### Bunch of cleaning
+## __1.2. Remove numbers, punctuations, doubles__
 
 ``` {r }
 geo_sao_paolo_df  <- geo_sao_paolo_df %>%
@@ -106,23 +76,27 @@ geo_sao_paolo_df  <- geo_sao_paolo_df %>%
     review_comment_message = gsub("([a-q t-z])\\1+", "\\1", 
                                        review_comment_message, 
                                        perl = TRUE),
-    # Remove these next line \n things
-    review_comment_message = str_remove_all(
-      review_comment_message, "\\n"),
-    # Between words white spaces
-    review_comment_message = str_replace_all(
-      review_comment_message, "\\s+", " "),
-    # Trailing white spaces
-    review_comment_message = str_replace_all(
-      review_comment_message, "\\s*$", ""),
-    # leading white spaces
-    review_comment_message = str_replace_all(
-      review_comment_message, "^\\s*", "")
-         )
+    # Get rid of line break strings
+    review_comment_message = gsub("\r?\n|\r", " ", review_comment_message)
+  )
+
+# Same for title
+geo_sao_paolo_df  <- geo_sao_paolo_df %>%
+  mutate(
+    # Remove punctuation 
+    review_comment_title = gsub("[[:punct:]]+"," ", review_comment_title),
+    # Remove digits
+    review_comment_title = gsub("[[:digit:]]+"," ", review_comment_title),
+    # remove double characters except ss and rr
+    review_comment_title = gsub("([a-q t-z])\\1+", "\\1", 
+                                       review_comment_title, 
+                                       perl = TRUE),
+    # Get rid of line break strings
+    review_comment_title = gsub("\r?\n|\r", " ", review_comment_title)
+  )
 ```
 
-
-### Remove extremely short words 
+## __1.3. Remove extremely short words__ 
 
 ``` {r }
 geo_sao_paolo_df <- geo_sao_paolo_df %>%
@@ -140,63 +114,176 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
         )
 ```
 
-# __Tokenization__
+
+## __1.4. To lower case__
 
 ``` {r }
-tokenized <- str_split(geo_sao_paolo_df$review_comment_message, " ")
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    review_comment_message = tolower(review_comment_message),
+    review_comment_title = tolower(review_comment_title)
+        )
 ```
 
 
-# __Stemming vs lemmatization__
+## __1.5. Lemmatization__
+### __1.5.0. Lemmatization vs. stemming__
+The choice was made to use lemmatization over stemming. 
 
-* Lemmatization: More sophisticated, reqwuires more effort and knowledge
-* Stemming: More straightforward, not as sophisticated.
+* Compared to English the morphology of Portuguese is more complex, which 
+runs the risk of over- and understemming.
+* Although lemmatization is more computationally complex, I only need to 
+go through it once as this is a one-shot research project.
+* Lemmatization generally provides better results, espically in inflection-rich
+languages like Spanish or Portuguese.
 
-Stemming is more appropriate. 
+Lemmatization will be done in __Python__ using _spaCy__ because:
 
-``` {r }
-to_stem <- tokenized[[1]]
-to_stem
-stemDocument(to_stem, language = "pt")
+* Options to do it _easily_ (in my eyes) in R are limited. In __spaCy__, 
+I don't even have to turn it into a corpus.
+* the __spaCy__ library offers trained models and pipelines that have exhibited
+above average performance in [recent tests for the Portuguese language.](https://lars76.github.io/2018/05/08/portuguese-lemmatizers.html)\n
+
+
+First, export current data - with only the necessary columns - to csv.
+This csv will be used in the Python script.
+``` {r eval = FALSE}
+to_write <- geo_sao_paolo_df %>%
+  select(review_id, review_comment_message)
+write.csv(to_write, "for_spacy.csv", row.names = FALSE)
 ```
 
-``` {r }
-stem <- wordStem(to_stem, language = "portuguese")
+The lemmatization in Python.
+
+``` {python eval = FALSE}
+import spacy
+import pandas as pd
+import math
+
+# Load portuguese pipeline
+nlp = spacy.load("pt_core_news_sm")
+
+# Loaad data that I exported from the current Rmarkdown file
+df = pd.read_csv('/home/mitchy123/Documents/MSc_MADS_2021/for_spacy.csv')
+
+# Assign new variable (not that functional, but helps when experimenting)
+sub_df = df
+
+# initialize empty list
+lemma_listje = []
+
+# Instruction of how data are seperated
+# As we are using sentences, it is seperated with spaces
+seperator = " "
+
+# For loop that lemmatizes each word of each comment
+for i in sub_df.iloc[:,1][sub_df.iloc[:,1].notna() == True]:
+    i = nlp(i)
+    interim_listje = []
+    for word in i:
+        interim_listje.append(word.lemma_)
+    interim_listje = seperator.join(interim_listje)
+    lemma_listje.append(interim_listje)
+
+# Add indexes of rows where there is not NaN
+nan_indices = sub_df.loc[pd.notna(sub_df["review_comment_message"]), :].index
+
+# Create dataframe to export
+d = {'sentence':lemma_listje, 'index':nan_indices}
+new_df = pd.DataFrame(d)
+
+# Export to csv, which will be used in this current Rmarkdown file again
+new_df.to_csv('lemmatized.csv')
 ```
 
-
-``` {r }
-full_char <- paste(stem, collapse = " ")
-full_char
-```
-
-
-
-``` {r }
-
-```
-
-
-
+Loading and merging to the df we were working with.
 ```{r }
-receb <- geo_sao_paolo_df %>% 
-  filter(grepl('receb', review_comment_message))
+lemmatized <- read.csv('lemmatized.csv')
+
+indiced_gsp <- geo_sao_paolo_df
+indiced_gsp$index <- c(0: (nrow(indiced_gsp) - 1))
+
+geo_sao_paolo_df <- merge(indiced_gsp, lemmatized, 
+                  by.x = 'index',
+                  by.y = 'index',
+                  all.x = TRUE)
+
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(review_comment_message = sentence) %>%
+  select(
+    - X,
+    - sentence,
+    - index
+        )
 ```
 
 
-# __Lemmatization__
 
 
 
+``` {r }
+indiced_gsp <- geo_sao_paolo_df
+indiced_gsp$index <- c(0: (nrow(indiced_gsp) - 1))
+```
+
+``` {r }
+geo_sao_paolo_df <- merge(indiced_gsp, lemmatized, 
+                  by.x = 'index',
+                  by.y = 'index',
+                  all.x = TRUE)
+
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(review_comment_message = sentence) %>%
+  select(
+    - X,
+    - sentence
+        )
+```
 
 
-# __cool packages__
+# whitespaces hold it for a minute, maybe not needed. 
 
-https://hub.packtpub.com/9-useful-r-packages-for-nlp-text-mining/
+``` {r eval = FALSE}
 
-``` {r}
-library(languageR) # lexical stuff cool
 
+    # Remove these next line \n things
+    review_comment_message = str_remove_all(
+      review_comment_message, "\\n"),
+    # Between words white spaces
+    review_comment_message = str_replace_all(
+      review_comment_message, "\\s+", " ")#,
+    # Trailing white spaces
+    #review_comment_message = str_replace_all(
+    #  review_comment_message, "\\s*$", ""),
+    # leading white spaces
+    #review_comment_message = str_replace_all(
+    #  review_comment_message, "^\\s*", "")
+         )
+
+```
+
+
+## __1.1. Standardization__
+
+* lowercase
+* Change encoding to English-letters only (ASCII)
+
+``` {r eval = FALSE}
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    review_comment_message = tolower(
+                                iconv(
+                                  review_comment_message, 
+                                  to = "ASCII//TRANSLIT"
+                                     )
+                                    ),
+    review_comment_title = tolower(
+                              iconv(
+                                review_comment_title,
+                                to = "ASCII//TRANSLIT"
+                                   )
+                                  )
+        )
 ```
 
 # Frequencies
@@ -214,25 +301,12 @@ new_text_df %>%
   count(word, sort = TRUE)
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 (stemming and tokenization first!)
 (Use context, so do this after knowledge of late, early, on time)
 ``` {r }
 
 stop_words <- c(
-  "e", "o", "a", "do", "de", "que", "no", "um", 
+  "e", "o", "a", "do", "de", "que", "no", "um" 
 )
 
 freight_words <- c(
@@ -240,28 +314,6 @@ freight_words <- c(
 )
 
 ```
-## 1.2. Punctuation
-I do want to keep track of these. It's interesting to know about
-
-* Question marks
-* Exclamation marks
-
-
-
-## 1.3. Numbers
-
-
-## 1.4. Misc weird stuff
-
-## 1.4. Tokenization 
-
-## 1.5. Stop words
-
-
-Use Portuguese stopwords library
-
-## 1.6. Lemmatization 
-
 
 
 
@@ -280,7 +332,6 @@ try <- geo_sao_paolo_df[grep("!", geo_sao_paolo_df$review_comment_message),]
 
 ```
 
-### Comments with numbers 
 
 ### Words with no meaning ()
 
