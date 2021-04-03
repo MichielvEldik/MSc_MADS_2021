@@ -1,5 +1,5 @@
 ---
-title: "Internel_data_cleansing"
+title: "Cleansing text data"
 author: "Michiel van Eldik"
 date: "`r Sys.Date()`"
 output:
@@ -11,6 +11,10 @@ output:
     highlight: tango
 ---
 
+
+# __<a href="index.html">Back to main</a>__
+
+<center> <a href="index.html">Back to main</a> </center>
 
 # __0. Prologue__
 ```{r message=FALSE}

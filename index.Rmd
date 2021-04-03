@@ -1,0 +1,20 @@
+---
+title: "Welcome!"
+author: "Michiel van Eldik"
+date: "`r Sys.Date()`"
+output:
+   rmdformats::downcute:
+    self_contained: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+---
+
+<center>__Consumers Left on the Sideline: A Spatial Explanation of why Some Choose to Write Online Reviews and Others Don't.__</center>\n
+
+<b>Abstract:</b> There may be several potential reasons for consumers to provide not only a quantitative star rating review, but written feedback as well. This project seeks to explain how geospatial differences between consumers in Brazil can affect the rate of written review creation. The focus lies mainly on:
+
+<b>Coding progress:</b> 
+
+* <a href="SAO_PAULO_P1_rmdformat.html">Step 1: Merging internal datasets</a>
+* <a href="SAO_PAULO_P2_rmdformat.html">Step 2: Text data cleansing</a>

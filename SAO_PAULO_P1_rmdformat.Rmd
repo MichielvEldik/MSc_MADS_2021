@@ -1,0 +1,602 @@
+---
+title: "Merging Internal Datasets"
+author: "Michiel van Eldik"
+date: "`r Sys.Date()`"
+output:
+   rmdformats::downcute:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+---
+
+
+# __<a href="index.html">Back to main</a>__
+
+<center> <a href="index.html">Back to main</a> </center>
+
+# __1. Loading OlistData__
+
+This page is dedicated to linking the internal datasets. With 'internal' datasets, I'm referring to everything pertaining to the [Kaggle dataset](https://www.kaggle.com/olistbr/brazilian-ecommerce) provided by Brazilian e-commerce platform Olist. The data can be linked as follows:
+
+![(https://i.imgur.com/HRhd2Y0.png)](Data_connections.png)
+
+Libraries that will be used...
+```{r message=FALSE}
+library(dplyr) # for some grouping
+library(kableExtra) # For displaying things nicely in the output HTML file
+```
+
+
+
+
+
+
+```{r }
+customers_df <- read.csv('./olist_data/olist_customers_dataset.csv')
+reviews_df <- read.csv('./olist_data/olist_order_reviews_dataset.csv')
+items_df <- read.csv('./olist_data/olist_order_items_dataset.csv')
+products_df <- read.csv('./olist_data/olist_products_dataset.csv')
+orders_df <- read.csv('./olist_data/olist_orders_dataset.csv')
+sellers_df <- read.csv('./olist_data/olist_sellers_dataset.csv')
+geo_df <- read.csv('./olist_data/olist_geolocation_dataset.csv')
+translate_df <- read.csv('./olist_data/product_category_name_translation.csv')
+payment_df <- read.csv('./olist_data/olist_order_payments_dataset.csv')
+```
+
+# __2. Unit of Analysis__
+Prior to any merging, it's important to realize that `review_id` is our unit of analysis.
+It's somewhat counter intuitive as marketing research tends to focus on revenues and conversion rates, which requires an order or orderlin_ unit of analysis. 
+Reasons for the `review_id` data level:
+
+* The current research wants to provide explanations and predictions on quantities of reviews.
+* The sample contains only conversions for which reviews have been placed. At best, you could make predictions about reviewed conversions or reviewed revenues, which is not very useful.
+
+# __3. Merge: order_df with review_df__
+
+The main intricacy with this merge is the fact that:
+
+* A unique `order_id` can be related to multiple unique `review_ids`
+* A unique `review_id` can related to multiple unique `order_ids`
+
+## __3.1. A unique order_id can be related to multiple unique review_ids__
+The fact that a unique order_id is associated with more than 1 unique review_id can be explained
+by a customer receiving multiple review requests for a multi-item order.
+An example from the reviews_df datatable\n
+
+```{r }
+# based on the reviews data 
+reviews_df[,1:3][reviews_df$order_id == '78cf5dc2baadfbac2c47c6ef7c2a2282',] %>%
+  kbl() %>%
+  kable_material(c("striped", "hover"))
+```
+The main issue lies in the fact that `review_id` can't be linked to different `product_ids` within the same `order_id` because the datatables are joined using `order_id`.\n  
+
+Apparently, a total of 555 order_ids are associated with more than 1 unique review_id.
+```{r }
+multiples_cases_order_df <- reviews_df %>%
+  group_by(order_id) %>% 
+  filter(n()>1)
+# 555
+length(unique(multiples_cases_order_df$order_id))
+```
+
+Now let's try to merge `review_df` with `orders_df`
+```{r }
+example_merge <- merge(orders_df,
+                       reviews_df,
+                       by.x = 'order_id',
+                       by.y = 'order_id',
+                       all.x = TRUE)
+# show table
+example_merge[,c(1:2,9)][example_merge$order_id == '78cf5dc2baadfbac2c47c6ef7c2a2282',]  %>%
+  kbl() %>%
+  kable_material(c("striped", "hover"))
+```
+
+* __The result:__ Whereas there is in actuality only 1 order and therefore supposed to be 1 row for each unique `order_id`, the merge has caused this to become more than 1 in the new datatable.\n
+
+* __The consequences:__ This implies that the new datatable will contain more orders than there actually were.\n
+
+* __The solution:__ There doesn't need to be a solution because there is no problem. It has been established earlier on that we will work with a `review_id` unit of analysis and that any interpretations of conversions or revenues are dubious to begin with due to the sampling bias. We just need to be aware of this fact and be cautious with interpretations.\n
+
+
+## __3.2. A unique review_id can be related to multiple unique order_ids__
+The second 'complexity' in merging `review_df` with `orders_df` is that a single review can be associated to multiple orders.\n
+An example from the case:
+
+```{r }
+# based on the reviews data
+reviews_df[,1:3][reviews_df$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
+  kbl() %>%
+  kable_material(c("striped", "hover"))
+```
+
+Apparently, 802 unique review_ids are connected to more than one unique `order_id`. 
+```{r }
+multiples_cases_rev_df <- reviews_df %>%
+  group_by(review_id) %>% 
+  filter(n()>1)
+length(unique(multiples_cases_rev_df$review_id))
+```
+The dataset shows that yes, an `order_id` with multiple different items can be represented by one review, perhaps because one review request was sent to the customer after a multi-item order. In that case, we would use the rule of thumb of attributing the review to the item with the highest `price`. The current case deviates from this scenario because a single review represents multiple `order_ids` rather than just 1. It begs the question: how could a single review be related to multiple orders?\n
+
+A possible explanation is that the unique `review_id` is in fact related to the same session by the same customer 
+and that this customer has ordered from 2 different sellers, which results in 2 separate `order_ids` in the same session. 
+If that person proceeds to complete the total transaction, only one review request is sent by Olist because:
+
+* The system can't send two reviews requests at exactly the same time stamp
+* A review is sent based on a transaction or session rather than on the number of unique `order_id`s
+
+An example of what happens post-merge when we don't deal with this issue:
+```{r }
+example_merge_2 <- merge(reviews_df,
+                       orders_df,
+                       by.x = 'order_id',
+                       by.y = 'order_id',
+                       all.x = TRUE)
+example_merge_2[,1:3][example_merge_2$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
+  kbl() %>%
+  kable_material(c("striped", "hover"))
+```
+
+__The result:__ All cases for which this issue occurs will be represented by >1 rows in the resulting dataset. I.e., we would end up with duplicates in the `review_id` column.\n
+
+__The consequences:__ This is problematic as `review_id` is our unit of analysis. Each row in the final datatable is supposed to represent a seperate unit. All cases for which this issue occurs will be artificially overrepresented in the sample. Moreover, there might be a non-random process underlying this issue (ordering multiple items and from seperate sellers), hence it could lead to bias. \n
+
+__The Solution:__ For each `review_id` case for which this occurs, a decision needs to be made to which `order_id` the `review_id` can be attributed. This can be done using the rule of thumb that the order_id associated with the highest priced product 'wins'. In this case, a product arriving later than expected could also trigger a review. This will be reviewed in the next section.
+
+## __3.3. Dealing with the double review_id merge issue __
+In any case, `review_df` must first be merged with `order_df`. The resulting datatable must then be merged with `items_df` which can subsequently be merged with `products_df`.\n
+
+We don't need orders that don't have reviews associated with them so we use `all.x = TRUE`.
+```{r }
+reviews_plus_orders_df <- merge(reviews_df, 
+                        orders_df, 
+                        by.x = 'order_id', 
+                        by.y = 'order_id')
+```
+Per contra, there is missingness between `items_df` and `order_df`. Certain orders are associated with NaNs in the `items_df` and this appears to be correlated with the `order_status` column. The order status associated with NaNs in `items_df` is 'unavailable' or 'canceled'. The fact that they are all associated with 'unavailable' or 'canceled' order statuses is important to take into account further down the road. For now, we don't want to exclude them. Hence, `all.x = TRUE` is used.
+```{r }
+revord_plus_items_df <- merge(reviews_plus_orders_df,
+                              items_df,
+                              by.x = 'order_id', 
+                              by.y = 'order_id',
+                              all.x = TRUE)
+
+
+```
+
+The last merge is with the current dataset and `products_df`.
+
+```{r }
+# first merge the translation of product categories from Portugues to English with products_df
+translated_products_df <- merge(products_df, 
+                     translate_df, 
+                     by.x = 'product_category_name', 
+                     by.y = 'product_category_name', 
+                     all.x = TRUE)
+# replace Portuguese category names with English translations of them
+translated_products_df$product_category_name <- translated_products_df$product_category_name_english
+# drop redundant column
+translated_products_df <- translated_products_df[,1:9]
+
+# Connect with the review + order + items dataframe to create a semi-complete df
+semi_df <- merge(revord_plus_items_df, 
+                 translated_products_df, 
+                 by.x = 'product_id', 
+                 by.y = 'product_id', 
+                 all.x = TRUE) # to keep the reviews that aren't associated with a product_id in 
+```
+
+Now comes the fun part: writing an algorithm that decides which `order_id` will be attributed to all of the duplicate `review_id`s.\n
+For starters, we have already identified our 'culprits' before, let's store them in a vector:
+
+```{r }
+multiples_cases_rev_df <- reviews_df %>%
+  group_by(review_id) %>% 
+  filter(n()>1)
+
+culprit_vector <- unique(multiples_cases_rev_df$review_id) # 802 unique review_ids that a decision needs to be made about
+```
+
+Algorithm: 
+
+1. Goes through all review_ids in the semi-merged dataset.
+2. It identifies if a review_id is amongst the 'culprits' (has multiple order_ids related to it).
+3. If it encounters a 'culprit', it looks for the `order_id` related to the highest priced product.
+4. It keeps track of these cases by adding them to a datatable.
+
+__Disclaimer:__ This is a highly computationally inefficient algorithm as new dataframes have to be made over the course of many loops. It takes a few minutes to run. It only needs to run once in my project so there is no point in spending time making it more efficient. 
+
+```{r eval = FALSE}
+
+# keep track of loop reps
+counter <- 0
+
+# initiate empty table without pre-specified columns or rows
+# this will be filled with the order_ids corresponding to the highest price per 'culprit'
+table = data.frame()
+
+# the loop 
+for (i in semi_df$review_id) {
+  if (i %in% culprit_vector) {
+    interim_df <- semi_df[semi_df$review_id == i,]
+    table <- rbind(table, interim_df[,2:3][which.max(interim_df$price),])
+    print(counter)
+    counter = counter + 1
+  }
+}
+# Keep unique rows only. 
+optimal_orders <- table[!duplicated(table), ]
+# save the table
+write.csv(optimal_orders,"dictionary_optimal_orders.csv", row.names = FALSE)
+```
+
+```{r include = FALSE}
+optimal_orders <- read.csv('dictionary_optimal_orders.csv')
+```
+
+Now that we have obtained our table with the highest priced orders per 'culprit', we can merge it with `reviews_df` and replace the `order_id`s for each 'culprit' with the high-price `order_id`. 
+```{r }
+# merge with review_df 
+merger_reviews_df <- merge(reviews_df,
+                           optimal_orders,
+                           by.x = 'review_id',
+                           by.y = 'review_id',
+                           all.x = TRUE)
+
+# separate the 'culprits' from the non-'culprits'
+subbie_2 <- merger_reviews_df[!is.na(merger_reviews_df$order_id.y),] 
+subbie <- merger_reviews_df[is.na(merger_reviews_df$order_id.y),] 
+# get columns set up in the right way
+subbie$order_id.y <- subbie$order_id.x
+# bind them back together
+happy_days <- rbind(subbie_2, subbie)
+# get rid of order.id.x, not necessary anymore
+happy_days <- happy_days %>%
+  select(-order_id.x)
+# get rid of duplicate rows
+happy_days <- unique(happy_days)
+```
+__Done!__
+
+* If there are no duplicates, number of rows of happy days df should match number of unique review_ids, which is approximately the case. 
+* The number of unique order_ids is a bit lower because some orders have multiple unique reviews, which we previously established will not bias analyses.
+
+```{r }
+length(unique(happy_days$review_id))
+nrow(happy_days)
+length(unique(happy_days$order_id))
+```
+__Before:__
+
+* Using an example from the case in the original `reviews_df`.
+* Two `order_id`'s are related to 1 `review_id`.
+* This needs to be adjusted to having only 1 `order_id` associated with the `review_id`.
+```{r }
+reviews_df[,1:3][reviews_df$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
+  kbl() %>%
+  kable_material(c("striped", "hover"))
+```
+
+```{r include = FALSE, eval = FALSE}
+# other examples
+reviews_df[reviews_df$review_id == '5bdf704ce1edc91bc6c73abede903d1c',]
+reviews_df[reviews_df$review_id == '55d37f60f12bd5af8b2185dda9ef6dea',]
+```
+
+
+__After:__
+
+* A decision has been made about which `order_id` should definitevely correspond to this `review_id`.
+* As you can see, there are no more duplicates for the `review_id`.
+```{r }
+happy_days[,c(1, 7, 2)][happy_days$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
+  kbl() %>%
+  kable_material(c("striped", "hover"))
+```
+
+```{r include = FALSE, eval = FALSE}
+# other examples
+happy_days[happy_days$review_id == '5bdf704ce1edc91bc6c73abede903d1c',]
+happy_days[happy_days$review_id == '55d37f60f12bd5af8b2185dda9ef6dea',]
+```
+
+__Proof:__
+
+* we can see that indeed the `order_id` that was chosen by the algorithm is connected to the order with highest `price`.
+```{r }
+semi_df[, c(3, 2, 19)][semi_df$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
+  kbl() %>%
+  kable_material(c("striped", "hover"))
+```
+
+Let's merge properly now. \n
+
+Because of the process we just went through, some `order_id`s will be lost. Namely those that are involved with the 'culprits' and were not associated with the highest price. This is unfortunate but inevitable. Because the unit of analysis is `review_id`, we don't need these remaining `order_id`s anymore as there is no review connected with them. Hence, `all.x` is true has been used in the merge to exclude those cases.
+
+```{r }
+reviews_orders <- merge(happy_days, 
+                        orders_df, 
+                        by.x = 'order_id.y', 
+                        by.y = 'order_id',
+                        all.x = TRUE) # only interested in orders related to reviews
+
+# make sure that it's still approximately equivalent, which it is.
+nrow(reviews_orders) # 99179
+length(unique(reviews_orders$review_id)) #99173
+```
+
+# __4. Merge: with items_df and customer_df__
+## __4.1. The issue and solution for the items_df merge__
+
+Reviews in _n_-item orders will be represented _n_ - 1 times too many.
+
+```{r }
+
+# roi = reviews + orders + items
+roi_df <- merge(reviews_orders,
+                              items_df,
+                              by.x = 'order_id.y', 
+                              by.y = 'order_id',
+                              all.x = TRUE)
+```
+
+Case and point:\
+
+An order with 21 items implies that a single review will be represented 21 times in the dataset.
+```{r }
+roi_df[, c(1, 2, 16)][roi_df$order_id.y == '8272b63d03f5f79c56e9e4120aec44ef',] %>%
+  kbl() %>%
+  kable_material(c("striped", "hover"))
+```
+
+The example is a multi-item order that also has more than 1 different `product_id`s associated with it.\n
+
+This is the case for a total of 9770 unique `review_id`s.
+```{r }
+mullies_df <- roi_df[, c(1, 2, 16)] %>%
+  group_by(review_id) %>% 
+  filter(n()>1)
+
+length(unique(mullies_df[!duplicated(mullies_df), ]$review_id))
+```
+
+```{r include = FALSE, eval = FALSE}
+# another example
+roi_df[, c(1, 2, 16)][roi_df$order_id.y == '93f27293d6f1881d4784abaf47d53ffe',] %>%
+  kbl() %>%
+  kable_material(c("striped", "hover"))
+```
+Data are currently at an order_line level of disaggregation. Data must be aggregated to the level of our unit of analysis: `review_id`. This can be done by:
+
+* `group_by(review_id)` can be used to aggregate to `review_id` level
+* If the multi-item order contains different items, a decision needs to be made about which `product_id` of the multi-item order a `review_id` is referring.
+  + A rule of thumb can be the most expensive product
+  + Another option is to go with the `product_id` that is most frequently present in the total order.
+  + A third option is the fact that an item was delivered later than expected
+* Furthermore, we need to turn individual orderline data into a `review_id` aggregate level. These columns are:
+  + price --> total_price_amount
+  + freight value --> total_freight_amount
+  + order_item_id --> total_number_of_items
+* Once we have obtained aggregate level data, we can delete the lower level data (on orderline level)
+* Subsequently, we are able to bring everything to a `review_id` level of aggregation by only keeping unique rows.
+
+
+It's best to first create these aggregates and then allocate `product_id` with the highest price to `review_id`.
+
+## __4.2. Step 1: obtaining review_id level aggregates for order items__
+
+```{r }
+# another example
+roi_df_2 <- roi_df %>%
+  group_by(review_id) %>%
+  mutate(total_price_amount = sum(price)) %>%
+  mutate(item_count = max(order_item_id)) %>%
+  mutate(average_price = mean(price)) %>%
+  mutate(sd_price = sd(price)) %>%
+  mutate(max_price = max(price)) %>% 
+  mutate(min_price = min(price)) %>% 
+  mutate(total_freight_amount = sum(freight_value)) %>%
+  mutate(average_freight_amount = mean(freight_value)) %>%
+  mutate(sd_freight_amount = sd(freight_value)) %>%
+  mutate(max_freight_amount = max(freight_value)) %>%
+  mutate(min_freight_amount = min(freight_value)) %>%
+  ungroup()
+
+roi_df_2 <- as.data.frame(roi_df_2)
+
+```
+
+```{r eval = FALSE, include = FALSE}
+roi_df_2[roi_df_2$order_id.y == '8272b63d03f5f79c56e9e4120aec44ef',]
+```
+
+
+## __4.3. Step 2: allocating most expensive product_id to review_id__
+Algorithm (extremely inefficient but works _just_ well enough to keep me from fixing it):
+
+* Go through all unique `review_id`s that have a duplicate in the data
+* For each `review_id`, return the highest price in the list
+* Return `product_id` and `price`. 
+* Replace all `product_id`s in the multi-item order with this newly found `product_id`
+
+```{r eval = FALSE }
+multicases_df <- roi_df_2 %>%
+  group_by(review_id) %>% 
+  filter(n()>1)
+
+multicases_df <- multicases_df[,c(2, 16, 19)]
+
+multicases_df <- as.data.frame(multicases_df)
+
+# alg could potentiually be sped up by using this one
+unique_multicases_df <- unique(multicases_df)
+
+# vector of stuff
+disco <- unique(multicases_df$review_id) #9770
+
+table_2 <- data.frame()
+
+for (d in disco) {
+  interim_df_2 <- multicases_df[multicases_df$review_id == d,]
+  table_2 <- rbind(table_2, interim_df_2[which.max(interim_df_2$price),])
+}
+
+# save the table
+#write.csv(optimal_orders,"dictionary_optimal_orders.csv", row.names = FALSE)
+write.csv(table_2,"dictionary_optimal_productids.csv", row.names = FALSE)
+```
+
+```{r include = FALSE}
+table_2 <- read.csv('dictionary_optimal_productids.csv')
+```
+Now that we have a dictionary that associates a `review_id` with the most expensive product, it's time to implement this in our full dataset.
+```{r }
+merger <- merge(roi_df_2,
+                table_2,
+                by.x = 'review_id',
+                by.y = 'review_id',
+                all.x = TRUE)
+# split data
+nick <- merger[is.na(merger$product_id.y),] 
+simon <-merger[! is.na(merger$product_id.y),] 
+# This makes 1 standardized column with all product_ids, including replacements we've found
+nick$product_id.y <- nick$product_id.x
+nick_simon <- rbind(nick, simon) # Not a fan of their music but it was an easy to remember duo... 
+```
+
+## __4.4. Step 3: delete orderline level data and remove duplicates__
+We need to get rid of data on orderline scale because we want to get it to a higher level of aggregation with the `unique()` method.
+```{r }
+
+nick_simon <- nick_simon %>% select(
+  -price.x,
+  -price.y,
+  -product_id.x,
+  -freight_value,
+  -order_item_id
+)
+
+```
+
+Using `unique()` method, we remove all duplicates and end up with all unique `review_id`s in the dataset.
+```{r }
+bicep <- unique(nick_simon)
+```
+
+
+## __4.4. Step 4: dealing with remaining duplicates (includes customer_df merge)__
+Evidently, we still have not completely finished our job as the number of rows in the dataset is not equal to the number of unique `review_id`s. instead, there is a difference of `1349`.
+```{r }
+# still there are probably around 1500 cases of duplicates. Probably due to differences in timestamps and stuff.
+nrow(bicep) -length(unique(bicep$review_id)) # should be zero, is in actuality 1349 :(
+```
+this returns a dataframe of with all remaining duplicate cases
+```{r }
+bicep_dups <- bicep %>%
+  group_by(review_id) %>% 
+  filter(n()>1)
+```
+
+* problem lies in different `order_ids` per review_id, can be solved by getting rid of `order.id`, which requires last merge on `order_id` with  payment dataset.
+* This problem also spills over into the `seller_id` column, which should also be deleted.
+* Also, problem lies in different `customer_ids` per `review_id`, which can be solved through merging with the customer dataset and afterwards deleting `customer_id`
+
+Merge with customer dataset
+```{r }
+bicep_df <- merge(bicep,
+                  customers_df,
+                  by.x = 'customer_id', 
+                  by.y = 'customer_id', 
+                  all.x = TRUE)
+```
+
+Get rid of columns that cause problems with the `unique()` method for data aggregation. __DISCLAIMER:__ as you can see I decided to discard `order_id` without merging to payment data. At this point I don't feel like I'm going to use that data.
+```{r }
+bicep_df <- bicep_df %>%
+  select(
+    - order_id.y,
+    - customer_id,
+    - seller_id,
+    - shipping_limit_date # This one can go as well as I don't plan on using this data
+  )
+```
+Aggregate everything again using `unique()`, this leaves us with 6 duplicates still. It's getting a lot smaller but we aren't quite there yet! These lasts 6 cases are weird orders that were all canceled or unavailable. Canceled and unavailable order statuses will be given likely not be included in analyses anyways so it's fine leaving it like this. After all, we're talking about 6 cases compared to a 100k rows dataset.
+```{r }
+bicep_df <- unique(bicep_df)
+nrow(bicep_df) -length(unique(bicep_df$review_id))
+# Who are the duplicates?
+bicep_df_dups <- bicep_df %>%
+  group_by(review_id) %>% 
+  filter(n()>1)
+```
+
+
+# __5. Merge: with products_df__
+
+Luckily, not all joins were a headache. This one was pretty straightforward! 
+```{r }
+bicep_df <- merge(bicep_df, 
+                 translated_products_df, # We created this dataset in one of the previous merge operations
+                 by.x = 'product_id.y', 
+                 by.y = 'product_id', 
+                 all.x = TRUE) # to keep the reviews that aren't associated with a product_id in 
+```
+Did the merge somehow create any duplicates? Doesn't look like it, we're still at 6. 
+```{r }
+length(unique(bicep_df$review_id))
+nrow(bicep_df)
+```
+Save the dataset. 
+```{r eval=FALSE}
+write.csv(bicep_df,"merged_dataset.csv", row.names = FALSE)
+```
+
+# __6. Merge: with geo_df__
+As this is only a demonstration of what I plan to do, I'll do it only for the state of Sao Paulo for now. The Geo_df dataset is quite large with about a million rows and might take a long time.\n
+
+__NOTICE:__ For a single state, the merge will be relatively easy because the context is made explicit for the zip code prefix: we know the state that it is in. Doing a full merge requires a bit more attention.   
+
+Select Sao Paulo state from our own dataset.
+```{r }
+sao_paulo_state <- bicep_df[bicep_df$customer_state == 'SP',]
+```
+
+Make sure we only look at Sao Paulo state data in the geo_df
+```{r }
+sao_paulo_geo_df <- geo_df[geo_df$geolocation_state == 'SP',]
+```
+
+There are multiple coordinates per `customer_zip_code_prefix`. In order to merge, we need to have 1 set of coordinates associated with 1 `customer_zip_code_prefix`. We can resolve this by calculating the centroids of coordinates for each `customer_zip_code_prefix` in the geo dataset by taking the `mean()` of the longs and lats whilst utilizing the `group_by` and `summarise` functions. 
+```{r }
+centroids_sao_paulo <- sao_paulo_geo_df %>%
+  
+  group_by(
+    geolocation_zip_code_prefix
+          ) %>%
+  
+  summarise(
+    centroid_lat = mean(geolocation_lat),
+    centroid_long = mean(geolocation_lng)
+           ) %>%
+  
+  ungroup()
+```
+
+Now simply join the coordinates dataset together with our review dataset.
+```{r }
+geo_sao_paolo_state_df <- merge(sao_paulo_state,
+                          centroids_sao_paulo,
+                          by.x = 'customer_zip_code_prefix',
+                          by.y = 'geolocation_zip_code_prefix',
+                          all.x = TRUE)
+```
+Write as csv to use in another Rmarkdown file.
+```{r eval=FALSE}
+write.csv(geo_sao_paolo_state_df,"sao_paulo_state_dataset.csv", row.names = FALSE)
+```
+
+
