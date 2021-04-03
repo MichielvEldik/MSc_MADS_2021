@@ -59,6 +59,22 @@ I do want to keep track of these. It's interesting to know about
 
 
 ``` {r }
+library(reticulate)
+use_python("/usr/bin/python3.8")
+use_virtualenv("/home/mitchy123/Documents/Lemmings/venv")
+spacy <- import("spacy")
+```
+
+``` {python  }
+#import pandas as pd
+import spacy
+nlp = spacy.load("pt_core_news_sm")
+```
+
+
+
+
+``` {r }
 # repl_python()
 # conda_create("r-reticulate")
 # py_install("pandas")
@@ -71,13 +87,13 @@ use_python("/usr/bin/python3.8")
 # virtualenv_create("r-reticulate")
 # virtualenv_install("r-reticulate", "scipy")
 # virtualenv_install("r-reticulate", "spacy")
-use_virtualenv("r-reticulate")
+use_virtualenv("/home/mitchy123/Documents/Lemmings/venv/bin/python")
 scipy <- import("pandas")
 spacy <- import("spacy")
 ```
 
 ``` {python  }
-import pandas as pd
+#import pandas as pd
 import spacy
 ```
 

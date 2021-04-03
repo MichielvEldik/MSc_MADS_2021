@@ -372,18 +372,26 @@ summary {
 <div id="TOC">
 <ul>
 <li><a href="#prologue"><strong>0. Prologue</strong></a></li>
-<li><a href="#text-data-pre-processing"><strong>1. Text data pre-processing</strong></a><ul>
-<li><a href="#what-we-have-what-are-our-goals"><strong>1.0. what we have &amp; what are our goals</strong></a></li>
-<li><a href="#data-type"><strong>1.1. Data type</strong></a></li>
-<li><a href="#remove-numbers-punctuations-doubles"><strong>1.2. Remove numbers, punctuations, doubles</strong></a></li>
-<li><a href="#remove-extremely-short-words"><strong>1.3. Remove extremely short words</strong></a></li>
+<li><a href="#text-pre-processing"><strong>1. Text pre processing</strong></a><ul>
+<li><a href="#what-we-have-and-what-we-want"><strong>1.0. What we have and what we want</strong></a></li>
+<li><a href="#convert-data-type"><strong>1.1. Convert data type</strong></a></li>
+<li><a href="#remove-numbers-punctuation-doubles"><strong>1.2. Remove numbers, punctuation, doubles</strong></a></li>
+<li><a href="#remove-extremely-short-comments"><strong>1.3. Remove extremely short comments</strong></a></li>
 <li><a href="#to-lower-case"><strong>1.4. To lower case</strong></a></li>
-<li><a href="#lemmatization"><strong>1.5. Lemmatization</strong></a><ul>
-<li><a href="#lemmatization-vs.-stemming"><strong>1.5.0. Lemmatization vs. stemming</strong></a></li>
+<li><a href="#record-comment-length"><strong>1.5. Record comment length</strong></a></li>
+<li><a href="#lemmatization"><strong>1.6. Lemmatization</strong></a><ul>
+<li><a href="#lemmatization-vs.-stemming"><strong>1.6.0. Lemmatization vs. stemming</strong></a></li>
+<li><a href="#write-csv-for-export"><strong>1.6.1. Write csv for export</strong></a></li>
+<li><a href="#lemmatization-with-spacy-in-python"><strong>1.6.2. Lemmatization with spaCy in Python</strong></a></li>
+<li><a href="#reading-and-merging-lemmatized-reviews"><strong>1.6.3. Reading and merging lemmatized reviews</strong></a></li>
+<li><a href="#example-case"><strong>1.6.4. Example case</strong></a></li>
 </ul></li>
+<li><a href="#multiple-white-spaces"><strong>1.7. Multiple White spaces</strong></a></li>
+<li><a href="#unreliability-in-text-data"><strong>1.8. Unreliability in text data</strong></a><ul>
+<li><a href="#inconsistent-application-of-diacritics-in-the-data"><strong>1.8.1. Inconsistent application of diacritics in the data</strong></a></li>
+<li><a href="#solution-spellchecker-and-autocorrect"><strong>1.8.2. Solution: Spellchecker and autocorrect</strong></a></li>
+<li><a href="#solution-standardization-through-character-encoding"><strong>1.8.3. Solution: Standardization through character encoding</strong></a></li>
 </ul></li>
-<li><a href="#whitespaces-hold-it-for-a-minute-maybe-not-needed.">whitespaces hold it for a minute, maybe not needed.</a><ul>
-<li><a href="#standardization"><strong>1.1. Standardization</strong></a></li>
 </ul></li>
 <li><a href="#frequencies">Frequencies</a><ul>
 <li><a href="#explore-text-data">explore text data</a><ul>
@@ -416,10 +424,10 @@ library(koRpus.lang.pt)</code></pre>
 <pre class="r"><code>geo_sao_paolo_df &lt;- input
 sanity_geo_sao_paulo &lt;- input</code></pre>
 </div>
-<div id="text-data-pre-processing" class="section level1">
-<h1><strong>1. Text data pre-processing</strong></h1>
-<div id="what-we-have-what-are-our-goals" class="section level2">
-<h2><strong>1.0. what we have &amp; what are our goals</strong></h2>
+<div id="text-pre-processing" class="section level1">
+<h1><strong>1. Text pre processing</strong></h1>
+<div id="what-we-have-and-what-we-want" class="section level2">
+<h2><strong>1.0. What we have and what we want</strong></h2>
 <p><strong>We have:</strong></p>
 <ul>
 <li>Portuguese;</li>
@@ -437,8 +445,8 @@ sanity_geo_sao_paulo &lt;- input</code></pre>
 </ul></li>
 </ul>
 </div>
-<div id="data-type" class="section level2">
-<h2><strong>1.1. Data type</strong></h2>
+<div id="convert-data-type" class="section level2">
+<h2><strong>1.1. Convert data type</strong></h2>
 <p>Currently, the comments and titles are a factor data type. The general preference for text analysis is character string representation. In some cases it’s even required, so let’s go ahead and change that!</p>
 <pre class="r"><code>geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
   mutate(
@@ -446,9 +454,10 @@ sanity_geo_sao_paulo &lt;- input</code></pre>
     review_comment_title = as.character(review_comment_title)
         )</code></pre>
 </div>
-<div id="remove-numbers-punctuations-doubles" class="section level2">
-<h2><strong>1.2. Remove numbers, punctuations, doubles</strong></h2>
-<pre class="r"><code>geo_sao_paolo_df  &lt;- geo_sao_paolo_df %&gt;%
+<div id="remove-numbers-punctuation-doubles" class="section level2">
+<h2><strong>1.2. Remove numbers, punctuation, doubles</strong></h2>
+<pre class="r"><code># For message
+geo_sao_paolo_df  &lt;- geo_sao_paolo_df %&gt;%
   mutate(
     # Remove punctuation 
     review_comment_message = gsub(&quot;[[:punct:]]+&quot;,&quot; &quot;, review_comment_message),
@@ -460,9 +469,8 @@ sanity_geo_sao_paulo &lt;- input</code></pre>
                                        perl = TRUE),
     # Get rid of line break strings
     review_comment_message = gsub(&quot;\r?\n|\r&quot;, &quot; &quot;, review_comment_message)
-  )
-
-# Same for title
+  )</code></pre>
+<pre class="r"><code># for title
 geo_sao_paolo_df  &lt;- geo_sao_paolo_df %&gt;%
   mutate(
     # Remove punctuation 
@@ -477,18 +485,13 @@ geo_sao_paolo_df  &lt;- geo_sao_paolo_df %&gt;%
     review_comment_title = gsub(&quot;\r?\n|\r&quot;, &quot; &quot;, review_comment_title)
   )</code></pre>
 </div>
-<div id="remove-extremely-short-words" class="section level2">
-<h2><strong>1.3. Remove extremely short words</strong></h2>
+<div id="remove-extremely-short-comments" class="section level2">
+<h2><strong>1.3. Remove extremely short comments</strong></h2>
 <pre class="r"><code>geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
   mutate(
-    
+    # comments with &lt;2 don&#39;t add anything 
     review_comment_message = ifelse(
-      nchar(review_comment_message) == 1,
-      &quot;&quot;,
-      review_comment_message),
-    
-    review_comment_message = ifelse(
-      nchar(review_comment_message) == 2 &amp; review_comment_message != &quot;ok&quot;,
+      nchar(review_comment_message) &lt; 3 &amp; review_comment_message != &quot;ok&quot;,
       &quot;&quot;,
       review_comment_message)
         )</code></pre>
@@ -497,30 +500,51 @@ geo_sao_paolo_df  &lt;- geo_sao_paolo_df %&gt;%
 <h2><strong>1.4. To lower case</strong></h2>
 <pre class="r"><code>geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
   mutate(
+    # convert comment message
     review_comment_message = tolower(review_comment_message),
+    # convert title
     review_comment_title = tolower(review_comment_title)
         )</code></pre>
 </div>
+<div id="record-comment-length" class="section level2">
+<h2><strong>1.5. Record comment length</strong></h2>
+<p>I do this before lemmatization as lemmatization will change words.</p>
+<pre class="r"><code>geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
+  mutate(
+    # total characters in the string
+    bef_nchar = nchar(geo_sao_paolo_df$review_comment_message),
+    # total number of separations (words) in the string 
+    bef_nwords = lengths(strsplit(geo_sao_paolo_df$review_comment_message, &quot; &quot;)),
+    # average number of letters per word 
+    nchar_perword = nchar(geo_sao_paolo_df$review_comment_message) / lengths(strsplit(geo_sao_paolo_df$review_comment_message, &quot; &quot;))
+  )</code></pre>
+</div>
 <div id="lemmatization" class="section level2">
-<h2><strong>1.5. Lemmatization</strong></h2>
+<h2><strong>1.6. Lemmatization</strong></h2>
 <div id="lemmatization-vs.-stemming" class="section level3">
-<h3><strong>1.5.0. Lemmatization vs. stemming</strong></h3>
+<h3><strong>1.6.0. Lemmatization vs. stemming</strong></h3>
 <p>The choice was made to use lemmatization over stemming.</p>
 <ul>
 <li>Compared to English the morphology of Portuguese is more complex, which runs the risk of over- and understemming.</li>
 <li>Although lemmatization is more computationally complex, I only need to go through it once as this is a one-shot research project.</li>
-<li>Lemmatization generally provides better results, espically in inflection-rich languages like Spanish or Portuguese.</li>
+<li>Lemmatization generally provides better results, especially in inflection-rich languages like Spanish or Portuguese.</li>
 </ul>
-<p>Lemmatization will be done in <strong>Python</strong> using _spaCy__ because:</p>
+<p>Lemmatization will be done in <strong>Python</strong> using <strong>spaCy</strong> because:</p>
 <ul>
-<li>Options to do it <em>easily</em> (in my eyes) in R are limited. In <strong>spaCy</strong>, I don’t even have to turn it into a corpus.</li>
-<li>the <strong>spaCy</strong> library offers trained models and pipelines that have exhibited above average performance in <a href="https://lars76.github.io/2018/05/08/portuguese-lemmatizers.html">recent tests for the Portuguese language.</a></li>
+<li>Options to do it <em>easily</em> (in my eyes) in R are limited. <strong>spaCy</strong> is powerful and requires only a few lines of code.</li>
+<li>The <strong>spaCy</strong> library offers trained models and pipelines that have exhibited above average performance in <a href="https://lars76.github.io/2018/05/08/portuguese-lemmatizers.html">recent tests for the Portuguese language.</a></li>
 </ul>
-<p>First, export current data - with only the necessary columns - to csv. This csv will be used in the Python script.</p>
+</div>
+<div id="write-csv-for-export" class="section level3">
+<h3><strong>1.6.1. Write csv for export</strong></h3>
+<p>Although, yes, the <code>Reticulate</code> library allows for Python integration with Rmarkdown. I haven’t managed to make it work yet so I do it in a separate Jupyter notebook script. So step 1 is writing our current data to a csv file that can be openened in that script.</p>
 <pre class="r"><code>to_write &lt;- geo_sao_paolo_df %&gt;%
   select(review_id, review_comment_message)
 write.csv(to_write, &quot;for_spacy.csv&quot;, row.names = FALSE)</code></pre>
-<p>The lemmatization in Python.</p>
+</div>
+<div id="lemmatization-with-spacy-in-python" class="section level3">
+<h3><strong>1.6.2. Lemmatization with spaCy in Python</strong></h3>
+<p><strong>Discaimer:</strong> this code chunk is for display purposes only.</p>
 <pre class="python"><code>import spacy
 import pandas as pd
 import math
@@ -559,76 +583,157 @@ new_df = pd.DataFrame(d)
 
 # Export to csv, which will be used in this current Rmarkdown file again
 new_df.to_csv(&#39;lemmatized.csv&#39;)</code></pre>
-<p>Loading and merging to the df we were working with.</p>
-<pre class="r"><code>lemmatized &lt;- read.csv(&#39;lemmatized.csv&#39;)
+</div>
+<div id="reading-and-merging-lemmatized-reviews" class="section level3">
+<h3><strong>1.6.3. Reading and merging lemmatized reviews</strong></h3>
+<p>The lemmatized data needs to be brought back to this Rmarkdown.</p>
+<pre class="r"><code># Load data
+lemmatized &lt;- read.csv(&#39;lemmatized.csv&#39;)
 
+# Create index column that will help with merge
 indiced_gsp &lt;- geo_sao_paolo_df
 indiced_gsp$index &lt;- c(0: (nrow(indiced_gsp) - 1))
 
+# Merge by index
 geo_sao_paolo_df &lt;- merge(indiced_gsp, lemmatized, 
                   by.x = &#39;index&#39;,
                   by.y = &#39;index&#39;,
                   all.x = TRUE)
 
+# Get rid of unnecessary columns
 geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
   mutate(review_comment_message = sentence) %&gt;%
   select(
     - X,
     - sentence,
     - index
-        )</code></pre>
-<pre class="r"><code>indiced_gsp &lt;- geo_sao_paolo_df
-indiced_gsp$index &lt;- c(0: (nrow(indiced_gsp) - 1))</code></pre>
-<pre class="r"><code>geo_sao_paolo_df &lt;- merge(indiced_gsp, lemmatized, 
-                  by.x = &#39;index&#39;,
-                  by.y = &#39;index&#39;,
-                  all.x = TRUE)
+        )
 
+# Data need to be turned to string type from factor again
 geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
-  mutate(review_comment_message = sentence) %&gt;%
-  select(
-    - X,
-    - sentence
+  mutate(
+    review_comment_message = as.character(review_comment_message),
+    review_comment_title = as.character(review_comment_title)
         )</code></pre>
 </div>
-</div>
-</div>
-<div id="whitespaces-hold-it-for-a-minute-maybe-not-needed." class="section level1">
-<h1>whitespaces hold it for a minute, maybe not needed.</h1>
-<pre class="r"><code>    # Remove these next line \n things
-    review_comment_message = str_remove_all(
-      review_comment_message, &quot;\\n&quot;),
-    # Between words white spaces
-    review_comment_message = str_replace_all(
-      review_comment_message, &quot;\\s+&quot;, &quot; &quot;)#,
-    # Trailing white spaces
-    #review_comment_message = str_replace_all(
-    #  review_comment_message, &quot;\\s*$&quot;, &quot;&quot;),
-    # leading white spaces
-    #review_comment_message = str_replace_all(
-    #  review_comment_message, &quot;^\\s*&quot;, &quot;&quot;)
-         )</code></pre>
-<div id="standardization" class="section level2">
-<h2><strong>1.1. Standardization</strong></h2>
+<div id="example-case" class="section level3">
+<h3><strong>1.6.4. Example case</strong></h3>
+<p>I have done more rigorous sanity checks behind the scenes to the extent that my very limited knowledge of the Portuguese language allows me. An example is shown below.</p>
+<p><strong>Before:</strong></p>
+<pre class="r"><code># Nonlemmatized dataset
+print(as.character(sanity_geo_sao_paulo$review_comment_message[8]))</code></pre>
+<pre><code>## [1] &quot;a entrega chegou antes do previsto.&quot;</code></pre>
+<p><strong>After:</strong></p>
+<pre class="r"><code># Lemmatized dataset
+print(geo_sao_paolo_df$review_comment_message[8])</code></pre>
+<pre><code>## [1] &quot;o entregar chegar antar do prever&quot;</code></pre>
+<p>What can be seen:</p>
 <ul>
-<li>lowercase</li>
-<li>Change encoding to English-letters only (ASCII)</li>
+<li><em>Entrega</em> is the present tense conjugation of lemma <em>entregar</em>;</li>
+<li><em>Chegou</em> is the past perfect conjugation of the lemma of the verb <em>chegar</em>;</li>
+<li>et cetera.</li>
 </ul>
+</div>
+</div>
+<div id="multiple-white-spaces" class="section level2">
+<h2><strong>1.7. Multiple White spaces</strong></h2>
+<p>Because we took away punctuation, we ended up with double white spaces in between words in certain comments. This was no problem for the lemmatization process but it might be in the future.</p>
+<p><strong>Example:</strong></p>
+<pre class="r"><code>geo_sao_paolo_df$review_comment_message[27]</code></pre>
+<pre><code>## [1] &quot;o entregar ser rápido excelente   o produto deixar o desejar não parco ser original e sim umar marcar similar não ter o mesmo eficacia de um original&quot;</code></pre>
+<p>It’s visible in the part “excelente o produto.”</p>
+<p>This is fixed by replacing all &lt; 1 consecutive white spaces with 1 white space.</p>
 <pre class="r"><code>geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
   mutate(
-    review_comment_message = tolower(
-                                iconv(
-                                  review_comment_message, 
-                                  to = &quot;ASCII//TRANSLIT&quot;
-                                     )
-                                    ),
-    review_comment_title = tolower(
-                              iconv(
-                                review_comment_title,
-                                to = &quot;ASCII//TRANSLIT&quot;
-                                   )
-                                  )
+    review_comment_message = str_replace_all(review_comment_message, &quot;\\s+&quot;, &quot; &quot;)
         )</code></pre>
+<p><strong>Same example after treatment:</strong></p>
+<pre class="r"><code>geo_sao_paolo_df$review_comment_message[27]</code></pre>
+<pre><code>## [1] &quot;o entregar ser rápido excelente o produto deixar o desejar não parco ser original e sim umar marcar similar não ter o mesmo eficacia de um original&quot;</code></pre>
+</div>
+<div id="unreliability-in-text-data" class="section level2">
+<h2><strong>1.8. Unreliability in text data</strong></h2>
+<div id="inconsistent-application-of-diacritics-in-the-data" class="section level3">
+<h3><strong>1.8.1. Inconsistent application of diacritics in the data</strong></h3>
+<p>The current Portuguese language makes use of four different diacritics:</p>
+<ul>
+<li><strong>Tilde ~</strong> (Eu não quero nada = I don’t want anything)</li>
+<li><strong>Acute ´</strong> (é tempo de = it’s about time)</li>
+<li><strong>Circumflex ^</strong> (Soy Português = I’m Portuguese)</li>
+<li><strong>Grave `</strong> (ir à escola = go to school)</li>
+<li><strong>Cedilla ¸</strong> (a comunicação entre as pessoas = communication between people)</li>
+</ul>
+<p>These are tools for pronunciation. Adding or removing them does not alter the meaning of a word in any way.</p>
+<p>The data show that not every customer uses diacritics. A common word in the data is “não”.</p>
+<p><strong>Number of cases that skip the use of a tilde (~):</strong></p>
+<pre class="r"><code>print(length(geo_sao_paolo_df[grepl(&#39;nao&#39;, geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message))</code></pre>
+<pre><code>## [1] 482</code></pre>
+<pre class="r"><code>head(geo_sao_paolo_df[grepl(&#39;nao&#39;, geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message)</code></pre>
+<pre><code>## [1] &quot;nao receber o produto&quot;                                                                                                                                    
+## [2] &quot;o toalha q se referir ao pisar do banheiro vir o cor bege e nao o cor vermelhar comer estar o amostrar&quot;                                                   
+## [3] &quot;nao receber o produto e tambem nao conseguir saber nado o respeitar do mesmo&quot;                                                                             
+## [4] &quot;nao entregar o pedir dentro do prazo ja solicitar cancelamento&quot;                                                                                           
+## [5] &quot;o tecer ser grosso parecer mais organza ue cetim nao gostar o acabamento também ser muito ruim&quot;                                                           
+## [6] &quot;nao conseguir dizer precisamente porque o fogao chegar parir meu inquilino e nao ter contaot com ele so atraves do corretor aparentemente ocorrer tudo ok&quot;</code></pre>
+<p><strong>Number of cases that don’t:</strong></p>
+<pre class="r"><code>print(length(geo_sao_paolo_df[grepl(&#39;não&#39;, geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message))</code></pre>
+<pre><code>## [1] 3293</code></pre>
+<pre class="r"><code>head(geo_sao_paolo_df[grepl(&#39;não&#39;, geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message)</code></pre>
+<pre><code>## [1] &quot;ainda não receber o comprar&quot;                                                                                                                                                                       
+## [2] &quot;o mini scaner não este funcionar precisar fazer o trocar do produto&quot;                                                                                                                               
+## [3] &quot;of br não conseguir rastrear o entregar e constar o site que já ser feito&quot;                                                                                                                         
+## [4] &quot;fazer o comprar de toner e ser entregar um de cada vez porém o noto fiscal do produto constar o entregar de produto fazer até umar reclamação referente o produto não entregar favor pedir atenção&quot;
+## [5] &quot;já conhecer o produto e o loja lanister on lenir mas ser o primeiro vez com o targaryen não ter nado do que reclamar gostar e recomendar &quot;                                                         
+## [6] &quot;o entregar ser rápido excelente o produto deixar o desejar não parco ser original e sim umar marcar similar não ter o mesmo eficacia de um original&quot;</code></pre>
+<p>This example shows that for only one word - albeit an extremely common one that will potentially be wiped out by the stopword filtering process - it is possible to miss out on 482 cases because of diacritic inconsistency.</p>
+</div>
+<div id="solution-spellchecker-and-autocorrect" class="section level3">
+<h3><strong>1.8.2. Solution: Spellchecker and autocorrect</strong></h3>
+<p>Before we do anything, you might wonder: &quot;why would you not use a spellchecker <em>before</em> the lemmatization process? Long story short: because it doesn’t work reliably. Unfortunately, this is a very difficult task. The code below uses the <code>hunspell</code> dictionary and library to make an attempt at recognizing and correcting spelling mistakes.</p>
+<p>Firstly, load the library and dictionary. “pt_BR” is the most recent (2017) available Portuguese-Brazilian dicitionary that can be used with <code>hunspell</code> library.</p>
+<pre class="r"><code>library(hunspell)
+dict &lt;- dictionary(&quot;pt_BR&quot;)</code></pre>
+<p>Secondly, I set up a sentence that has relatively simple spelling errors:</p>
+<ul>
+<li>“nao” should be não;</li>
+<li>“solicitarr” should be solicitar;</li>
+<li>“ja” should be já.</li>
+</ul>
+<pre class="r"><code>bad &lt;- hunspell(&quot;nao entregar o pedir dentro do prazo ja solicitarr cancelamento&quot;, dict = dict)
+print(bad[[1]])</code></pre>
+<pre><code>## [1] &quot;nao&quot;        &quot;ja&quot;         &quot;solicitarr&quot;</code></pre>
+<p>The dictionary manages to spot the spelling errors. But can it give us legitimate suggestions on what the words should be?</p>
+<pre class="r"><code>hunspell_suggest(bad[[1]])</code></pre>
+<pre><code>## [[1]]
+##  [1] &quot;nap&quot;  &quot;no&quot;   &quot;nae&quot;  &quot;nag&quot;  &quot;nah&quot;  &quot;nab&quot;  &quot;nay&quot;  &quot;Tao&quot;  &quot;Lao&quot;  &quot;Mao&quot; 
+## [11] &quot;NATO&quot;
+## 
+## [[2]]
+##  [1] &quot;ha&quot;  &quot;j&quot;   &quot;a&quot;   &quot;jar&quot; &quot;jag&quot; &quot;jam&quot; &quot;jab&quot; &quot;jay&quot; &quot;jaw&quot; &quot;ea&quot;  &quot;jr&quot;  &quot;ta&quot; 
+## [13] &quot;la&quot;  &quot;ca&quot;  &quot;jg&quot; 
+## 
+## [[3]]
+## [1] &quot;solicit arr&quot; &quot;solicit-arr&quot; &quot;solicitor&quot;   &quot;solitary&quot;</code></pre>
+</div>
+<div id="solution-standardization-through-character-encoding" class="section level3">
+<h3><strong>1.8.3. Solution: Standardization through character encoding</strong></h3>
+<p>We can’t fix the problem but we can make the situation better from an NLP perspective The diacritic-free variant of a word is the common denominator in a way. The diacritic inconsistency can hence be fixed by turning all text to ASCII character encoding. Yes, we will lose our diacritics but diacritics have a predominantly phonetic utility and don’t change much in terms of semantics. It’s not ideal but it’s the lesser of two evils.</p>
+<pre class="r"><code>geo_sao_paolo_df &lt;- geo_sao_paolo_df %&gt;%
+  mutate(
+    # Convert message
+    review_comment_message = iconv
+         (
+       review_comment_message, 
+       to = &quot;ASCII//TRANSLIT&quot;
+         ),
+    # Convert title
+     review_comment_title = iconv
+         (
+       review_comment_title,
+       to = &quot;ASCII//TRANSLIT&quot;
+         )
+        )</code></pre>
+</div>
 </div>
 </div>
 <div id="frequencies" class="section level1">
@@ -641,22 +746,8 @@ text_df &lt;- tibble(line = 1:41638, text = text)
 new_text_df &lt;- text_df %&gt;%
   unnest_tokens(word, text)
 
-new_text_df %&gt;%
+see &lt;- new_text_df %&gt;%
   count(word, sort = TRUE)</code></pre>
-<pre><code>## # A tibble: 6,174 x 2
-##    word         n
-##    &lt;chr&gt;    &lt;int&gt;
-##  1 &lt;NA&gt;     25066
-##  2 o        17512
-##  3 produto   7942
-##  4 e         6627
-##  5 ser       5539
-##  6 entregar  5000
-##  7 do        4647
-##  8 de        4590
-##  9 não       4167
-## 10 prazo     3538
-## # … with 6,164 more rows</code></pre>
 <p>(stemming and tokenization first!) (Use context, so do this after knowledge of late, early, on time)</p>
 <pre class="r"><code>stop_words &lt;- c(
   &quot;e&quot;, &quot;o&quot;, &quot;a&quot;, &quot;do&quot;, &quot;de&quot;, &quot;que&quot;, &quot;no&quot;, &quot;um&quot; 
