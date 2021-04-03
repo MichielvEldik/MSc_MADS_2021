@@ -16,13 +16,17 @@ output:
 
 <center> <a href="index.html">Back to main</a> </center>
 
-# __0. Prologue__
+
+
+
+# __1. Introduction__
+
+
 ```{r message=FALSE}
 library(dplyr)
 library(kableExtra)
 library(car)
 library(tidytext)
-library(lubridate)
 library(tm)
 library(stringr)
 library(NLP)
@@ -40,8 +44,6 @@ geo_sao_paolo_df <- input
 sanity_geo_sao_paulo <- input
 ```
 
-# __1. Text pre processing__
-## __1.0. What we have and what we want__
 
 __We have:__
 
@@ -59,7 +61,7 @@ __What we want:__
   + Lexicon
   + etc. 
 
-## __1.1. Convert data type__
+# __2. Convert data type__
 Currently, the comments and titles are a factor data type. 
 The general preference for text analysis is character string representation. 
 In some cases it's even required, so let's go ahead and change that!
@@ -71,7 +73,7 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
         )
 ```
 
-## __1.2. Remove numbers, punctuation, doubles__
+# __3. Remove numbers, punctuation, doubles__
 ``` {r }
 # For message
 geo_sao_paolo_df  <- geo_sao_paolo_df %>%
@@ -106,7 +108,7 @@ geo_sao_paolo_df  <- geo_sao_paolo_df %>%
   )
 ```
 
-## __1.3. Remove extremely short comments__ 
+# __4. Remove extremely short comments__ 
 ``` {r }
 geo_sao_paolo_df <- geo_sao_paolo_df %>%
   mutate(
@@ -119,7 +121,7 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
 ```
 
 
-## __1.4. To lower case__
+# __5. To lower case__
 
 ``` {r }
 geo_sao_paolo_df <- geo_sao_paolo_df %>%
@@ -132,7 +134,7 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
 ```
 
 
-## __1.5. Record comment length__
+# __6. Record comment length__
 
 I do this before lemmatization as lemmatization will change words.
 
@@ -148,8 +150,8 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
   )
 ``` 
 
-## __1.6. Lemmatization__
-### __1.6.0. Lemmatization vs. stemming__
+# __7. Lemmatization__
+## __7.1. Lemmatization vs. stemming__
 The choice was made to use lemmatization over stemming. 
 
 * Compared to English the morphology of Portuguese is more complex, which 
@@ -166,7 +168,7 @@ and requires only a few lines of code.
 * The __spaCy__ library offers trained models and pipelines that have exhibited
 above average performance in [recent tests for the Portuguese language.](https://lars76.github.io/2018/05/08/portuguese-lemmatizers.html)\n
 
-### __1.6.1. Write csv for export__
+## __7.2. Write csv for export__
 Although, yes, the `Reticulate` library allows for Python integration with 
 Rmarkdown. I haven't managed to make it work yet so I do it in a separate 
 Jupyter notebook script. So step 1 is writing our current data to a csv file
@@ -178,7 +180,7 @@ to_write <- geo_sao_paolo_df %>%
 write.csv(to_write, "for_spacy.csv", row.names = FALSE)
 ```
 
-### __1.6.2. Lemmatization with spaCy in Python__
+## __7.3. Lemmatization with spaCy in Python__
 __Discaimer:__ this code chunk is for display purposes only. 
 
 ``` {python eval = FALSE}
@@ -222,7 +224,7 @@ new_df = pd.DataFrame(d)
 new_df.to_csv('lemmatized.csv')
 ```
 
-### __1.6.3. Reading and merging lemmatized reviews__
+## __7.4. Reading and merging lemmatized reviews__
 The lemmatized data needs to be brought back to this Rmarkdown.
 
 ```{r }
@@ -256,7 +258,7 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
         )
 ```
 
-### __1.6.4. Example case__
+## __7.5. Example case__
 I have done more rigorous sanity checks behind the scenes to the extent that my
 very limited knowledge of the Portuguese language allows me. An example is shown
 below.\n
@@ -278,7 +280,7 @@ What can be seen:
 * _Chegou_ is the past perfect conjugation of the lemma of the verb _chegar_;
 * et cetera.
 
-## __1.7. Multiple White spaces__
+# __8. Multiple White spaces__
 Because we took away punctuation, we ended up with double white spaces in between words
 in certain comments. This was no problem for the lemmatization process but it 
 might be in the future.\n 
@@ -303,8 +305,8 @@ geo_sao_paolo_df$review_comment_message[27]
 ```
 
 
-## __1.8. Unreliability in text data__
-### __1.8.1. Inconsistent application of diacritics in the data__
+# __9. Unreliability in text data__
+## __9.1. Inconsistent application of diacritics in the data__
 The current Portuguese language makes use of four different diacritics:
 
 * __Tilde ~__ (Eu não quero nada = I don't want anything)
@@ -313,22 +315,39 @@ The current Portuguese language makes use of four different diacritics:
 * __Grave `__ (ir à escola = go to school)
 * __Cedilla ¸__ (a comunicação entre as pessoas = communication between people)
 
-These are tools for pronunciation. Adding or removing them does not alter the 
-meaning of a word in any way.\n
+The data show that not every customer uses diacritics.
 
-The data show that not every customer uses diacritics. A common word in the data
-is "não".\n
-
-__Number of cases that skip the use of a tilde (~):__ 
+__Number of cases that skip the use of a tilde (~) in "não":__ 
 ``` {r }
-print(length(geo_sao_paolo_df[grepl('nao', geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message))
-head(geo_sao_paolo_df[grepl('nao', geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message)
+print(
+ length(
+  geo_sao_paolo_df[
+   grepl(
+    'nao',
+    geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message))
+
+head(
+ geo_sao_paolo_df[
+  grepl(
+   'nao',
+    geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message)
 ```
 
 __Number of cases that don't:__
 ```{r }
-print(length(geo_sao_paolo_df[grepl('não', geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message))
-head(geo_sao_paolo_df[grepl('não', geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message)
+print(
+ length(
+  geo_sao_paolo_df[
+    grepl(
+     'não',
+     geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message))
+
+
+head(
+ geo_sao_paolo_df[
+  grepl(
+   'não',
+   geo_sao_paolo_df$review_comment_message) == TRUE,]$review_comment_message)
 
 ```
 
@@ -336,7 +355,7 @@ This example shows that for only one word - albeit an extremely common one that
 will potentially be wiped out by the stopword filtering process - it is possible
 to miss out on 482 cases because of diacritic inconsistency.
 
-### __1.8.2. Solution: Spellchecker and autocorrect__
+## __9.2. Solution: Spellchecker and autocorrect__
 Before we do anything, you might wonder: "why would you not use a spellchecker 
 _before_ the lemmatization process? Long story short: because it doesn't work 
 reliably. Unfortunately, this is a very difficult task. The code below uses the `hunspell` dictionary and library to make an attempt at recognizing and correcting spelling mistakes.\n
@@ -355,18 +374,23 @@ Secondly, I set up a sentence that has relatively simple spelling errors:
 * "ja" should be já.
 
 ```{r }
-bad <- hunspell("nao entregar o pedir dentro do prazo ja solicitarr cancelamento", dict = dict)
+bad <- hunspell(
+  "nao entregar o pedir dentro do prazo ja solicitarr cancelamento", 
+  dict = dict)
+
 print(bad[[1]])
 ```
 
 The dictionary manages to spot the spelling errors. But can it give us legitimate
-suggestions on what the words should be?
+suggestions on what the words should be.
 
 ```{r }
 hunspell_suggest(bad[[1]])
 ```
+In conclusion, we need something else because the dictionary method is going to 
+be too unreliable.
 
-### __1.8.3. Solution: Standardization through character encoding__
+## __9.3. Solution: Standardization through character encoding__
 
 We can't fix the problem but we can make the situation better from an NLP perspective
 The diacritic-free variant of a word is the common denominator in a way. 
@@ -379,25 +403,21 @@ but it's the lesser of two evils.
 geo_sao_paolo_df <- geo_sao_paolo_df %>%
   mutate(
     # Convert message
-    review_comment_message = iconv
-         (
+    review_comment_message = iconv(
        review_comment_message, 
-       to = "ASCII//TRANSLIT"
-         ),
+       to = "ASCII//TRANSLIT"),
     # Convert title
-     review_comment_title = iconv
-         (
+     review_comment_title = iconv(
        review_comment_title,
-       to = "ASCII//TRANSLIT"
-         )
+       to = "ASCII//TRANSLIT")
         )
 ```
 
 
 
-## __1.9. Stop words__
+# __10. Stop words__
 
-### __1.9.0. What stop words are and why they matter__
+## __10.1. What stop words are and why they matter__
 The definition of "stop word" is important because removing stop words is a 
 somewhat subjective process. I would describe _stop word_ as "any word that 
 does not contribute to learning the semantics of a piece of text." As such, 
@@ -405,29 +425,29 @@ using some sort of 'universal stop word list' is not going to get us far.\n
 
 We want to remove stop words because:
 
-* it decreases data and thereby training time;
-* 
+* doing so decreases data and thereby training time;
+* It removes statistical noise, which can alter outcomes of NLP methods. 
 
+## __10.2. Most frequent words__
 
-Reducing stop word
-
-### __
-
-
-seeing as we, we caqn ssafgely take away stuff 
 
 ``` {r}
-text <- as.character(geo_sao_paolo_df$review_comment_message)
-
-text_df <- tibble(line = 1:41638, text = text)
-
+text_df <- tibble(line = 1:41638, 
+                  text = as.character(geo_sao_paolo_df$review_comment_message))
 
 new_text_df <- text_df %>%
-  unnest_tokens(word, text)
-
-see <- new_text_df %>%
+  unnest_tokens(word, text) %>%
   count(word, sort = TRUE)
+
+head(new_text_df[-1,])
 ```
+
+
+## __10.3. Unique words__
+
+How many? 
+
+## __10.4. Formulating stop words list__
 
 (stemming and tokenization first!)
 (Use context, so do this after knowledge of late, early, on time)
@@ -444,100 +464,10 @@ freight_words <- c(
 ```
 
 
+## __10.5. Filtering out stop words__
 
 
-## explore text data
-Basically I want an answer to whether which comments are noise and which
-ones can be taken seriously.
-
-### words with one or multiple expression signs (?, !, *, ...)
-
-``` {r }
-# is there a dot?
-try <- geo_sao_paolo_df[grep(".", geo_sao_paolo_df$review_comment_message),]
-
-try <- geo_sao_paolo_df[grep("!", geo_sao_paolo_df$review_comment_message),]
-
-```
-
-
-### Words with no meaning ()
-
-### single words
-
-### short comments vs actual stories that are useful 
-length > xxx
-
-# Dates data 
-``` {r }
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
-  mutate(
-    review_creation_date = as.Date(review_creation_date,
-                                   format = "%Y-%m-%d %H:%M:%S"),
-    review_answer_timestamp = as.Date(review_answer_timestamp,
-                                   format = "%Y-%m-%d %H:%M:%S"),
-    order_purchase_timestamp = as.Date(order_purchase_timestamp, 
-                                   format = "%Y-%m-%d %H:%M:%S"),
-    order_approved_at = as.Date(order_approved_at,
-                                   format = "%Y-%m-%d %H:%M:%S"),
-    order_delivered_carrier_date = as.Date(order_delivered_carrier_date,
-                                   format = "%Y-%m-%d %H:%M:%S"),
-    order_delivered_customer_date = as.Date(order_delivered_customer_date,
-                                   format = "%Y-%m-%d %H:%M:%S"),
-    order_estimated_delivery_date = as.Date(order_estimated_delivery_date,
-                                   format = "%Y-%m-%d %H:%M:%S")
-         )
-```
-
-time relative variables
-``` {r }
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
-  mutate(
-    diff_est_deliv = order_estimated_delivery_date - order_delivered_customer_date,
-    diff_pur_est  = order_estimated_delivery_date - order_purchase_timestamp,
-    diff_pur_deliv = order_delivered_customer_date - order_purchase_timestamp,
-    diff_rev_crea_ans = review_creation_date - review_answer_timestamp,
-    diff_rev_est_ans = order_estimated_delivery_date - review_answer_timestamp,
-    diff_rev_deliv_ans = order_delivered_customer_date - review_answer_timestamp
-         )
-```
-
-weekend dummies 
-``` {r }
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
-  mutate(
-    # show weekday of a date
-    review_sent_dow = wday(review_creation_date, label = TRUE),
-    review_answer_dow = wday(review_answer_timestamp, label = TRUE),
-    
-    # Dummy variable weekend yes/no
-    review_sent_wknd = ifelse(
-      review_sent_dow == 'zo' | review_sent_dow == 'za', 1, 0),
-    review_answer_wknd = ifelse(
-      review_answer_dow == 'zo' | review_answer_dow == 'za', 1, 0)
-         )
-```
-
-Year dummies 
-``` {r }
-geo_sao_paolo_df<- geo_sao_paolo_df %>%
-  mutate(
-    y_2016 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0),
-    y_2017 = ifelse(year(order_purchase_timestamp) == '2017', 1, 0),
-    y_2018 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0)
-         )
-```
-
-# Duplicates in customer cities
-
-
-
-# Past behaviour of customer
-
-* previous recensy 
-* frequency
-* new_yes/no
-
+# __11. Writing data__
 
 
 
