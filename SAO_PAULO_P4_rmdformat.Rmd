@@ -28,6 +28,7 @@ library(rgdal)
 library(spatialEco)
 library(revgeo)
 library(car)
+library(koRpus)
 ```
 
 ```{r }
@@ -231,6 +232,24 @@ Takeaways...
 length messages are not in the equation.
 * Higher priced products elicit longer messages.
 * Higher HDI elicits longer messages. 
+
+## __4.4. Lexical diversity__
+
+AS fun little instrument in the `koRpus` package is `textstat_lexdiv`. Let
+'s se how it works. It requires longer texts to run. So maybe a future project whereby I collect all comments from a certain HDI range or review 
+score range. It's good to know that this is availables.
+
+```{r eval=FALSE }
+
+library(koRpus.lang.en)
+example_1 <- "hey jude"
+example_2 <- "hey jude, dont make it bad"
+
+available.koRpus.lang()
+
+lex.div(example_1, force.lang= "en")
+```
+
 
 # __5. Moving forward__
 
