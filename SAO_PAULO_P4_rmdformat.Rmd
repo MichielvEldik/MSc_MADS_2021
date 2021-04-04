@@ -39,7 +39,7 @@ geo_sao_paolo_df <- input
 ```
 
 
-## __2. Connect to shapefile to assign municiaplity to cases__
+# __2. Connect to shapefile to assign municiaplity to cases__
 There are a few NAs for the coordinates. We'll move on without them for now.
 ```{r }
 
@@ -84,7 +84,7 @@ new_guy_df <- as.data.frame(new_guy)
 ```
 
 
-## __3. Incorporate municipality-level HDI__
+# __3. Incorporate municipality-level HDI__
 ```{r }
 muni_hdi_sp_state <- read.csv('sp_state_municipalities_hdi.csv', header = FALSE)
 ```
@@ -112,7 +112,7 @@ merry <- merge(new_guy_df,
                all.x = TRUE)
 ```
 
-## __4. First analyses__
+# __4. First analyses__
 
 ## __4.1. Comparing HDI and commenting behaviour__
 
