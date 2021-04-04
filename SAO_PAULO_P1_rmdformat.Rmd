@@ -589,6 +589,4 @@ geo_sao_paolo_state_df <- merge(sao_paulo_state,
 Write as csv to use in another Rmarkdown file.
 ```{r eval=FALSE}
 write.csv(geo_sao_paolo_state_df,"sao_paulo_state_dataset.csv", row.names = FALSE)
-```
-
-# __7. TO DO FOR FULL SCALE: DEAL WITH AMBIGUITY IN CITYNAMES AND PREFIXES__
+``` 
