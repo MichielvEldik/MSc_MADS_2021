@@ -1829,6 +1829,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <li><a href="#comparing-hdi-and-commenting-behaviour"><strong>4.1. Comparing HDI and commenting behaviour</strong></a></li>
             <li><a href="#other-variables-affecting-review-creation"><strong>4.2. Other variables affecting review creation</strong></a></li>
             <li><a href="#other-variables-affecting-review-length"><strong>4.3. Other variables affecting review length</strong></a></li>
+            <li><a href="#lexical-diversity"><strong>4.4. Lexical diversity</strong></a></li>
             </ul></li>
             <li><a href="#moving-forward"><strong>5. Moving forward</strong></a></li>
             </ul>
@@ -1868,7 +1869,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <span id="cb1-6"><a href="#cb1-6"></a><span class="kw">library</span>(rgdal)</span>
 <span id="cb1-7"><a href="#cb1-7"></a><span class="kw">library</span>(spatialEco)</span>
 <span id="cb1-8"><a href="#cb1-8"></a><span class="kw">library</span>(revgeo)</span>
-<span id="cb1-9"><a href="#cb1-9"></a><span class="kw">library</span>(car)</span></code></pre></div>
+<span id="cb1-9"><a href="#cb1-9"></a><span class="kw">library</span>(car)</span>
+<span id="cb1-10"><a href="#cb1-10"></a><span class="kw">library</span>(koRpus)</span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>input &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;sp_3_derived_vars.csv&quot;</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>geo_sao_paolo_df &lt;-<span class="st"> </span>input</span></code></pre></div>
 </div>
@@ -2378,6 +2380,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>Higher priced products elicit longer messages.</li>
 <li>Higher HDI elicits longer messages.</li>
 </ul>
+</div>
+<div id="lexical-diversity" class="section level2">
+<h2><strong>4.4. Lexical diversity</strong></h2>
+<p>AS fun little instrument in the <code>koRpus</code> package is <code>textstat_lexdiv</code>. Let ’s se how it works. It requires longer texts to run. So maybe a future project whereby I collect all comments from a certain HDI range or review score range. It’s good to know that this is availables.</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a><span class="kw">library</span>(koRpus.lang.en)</span>
+<span id="cb37-2"><a href="#cb37-2"></a>example_<span class="dv">1</span> &lt;-<span class="st"> &quot;hey jude&quot;</span></span>
+<span id="cb37-3"><a href="#cb37-3"></a>example_<span class="dv">2</span> &lt;-<span class="st"> &quot;hey jude, dont make it bad&quot;</span></span>
+<span id="cb37-4"><a href="#cb37-4"></a></span>
+<span id="cb37-5"><a href="#cb37-5"></a><span class="kw">available.koRpus.lang</span>()</span>
+<span id="cb37-6"><a href="#cb37-6"></a></span>
+<span id="cb37-7"><a href="#cb37-7"></a><span class="kw">lex.div</span>(example_<span class="dv">1</span>, <span class="dt">force.lang=</span> <span class="st">&quot;en&quot;</span>)</span></code></pre></div>
 </div>
 </div>
 <div id="moving-forward" class="section level1">
