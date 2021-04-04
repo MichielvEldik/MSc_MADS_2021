@@ -74,7 +74,7 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
         )
 ```
 
-# __3. Remove numbers, punctuation, doubles__
+# __3. Remove numbers, punctuation, doubles__ {3}
 ``` {r }
 # For message
 geo_sao_paolo_df  <- geo_sao_paolo_df %>%
@@ -393,8 +393,8 @@ be too unreliable.
 
 ## __9.3. Solution: standardization by altering character encoding__
 
-We can't fix the problem but we can make the situation better from an NLP perspective
-The diacritic-free variant of a word is the common denominator in a way. 
+We can't fix the problem but we can make the situation better from an NLP perspective.
+The diacritic-free variant of a word is the common denominator. 
 The diacritic inconsistency can hence be fixed by turning all text to ASCII character 
 encoding. Yes, we will lose our diacritics but diacritics have a predominantly 
 phonetic utility and don't change much in terms of semantics. It's not ideal
@@ -445,8 +445,8 @@ new_text_df[-1,] %>%
   scroll_box(height = "500px")
 ```
 
-## __10.3. Creating a custom stopwords dictionary__
-__DISCLAIMER:__ It's not really a dictionary as it doesn't have unique key-value pairs.
+## __10.3. Creating a custom stopwords collection__
+Using a collection of words we deem as 'stop words', we can clean the data. 
 
 Initialize empty vector.
 ```{r }
@@ -482,7 +482,11 @@ new_text_df <- new_text_df %>%
 
 ```
 
-Filter out words that have more than 2 consecutive characters.
+Filter out words that have more than 2 consecutive characters. Again,
+in a perfect world we would _correct_ rather than _filter_. A more sophisticated
+solution might be used in a later stadium. For now, this sufficies, especially 
+considering that there are relatively few of these cases left after initial
+filtering in [chapter 3](#3).
 ```{r }
 new_text_df %>%
   filter(grepl('([a-z\\d])\\1\\1', word)) %>%

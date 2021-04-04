@@ -2048,7 +2048,7 @@ border: 0;
             <li><a href="#back-to-main"><strong><a href="index.html">Back to main</a></strong></a></li>
             <li><a href="#introduction"><strong>1. Introduction</strong></a></li>
             <li><a href="#convert-data-type"><strong>2. Convert data type</strong></a></li>
-            <li><a href="#remove-numbers-punctuation-doubles"><strong>3. Remove numbers, punctuation, doubles</strong></a></li>
+            <li><a href="#remove-numbers-punctuation-doubles-3"><strong>3. Remove numbers, punctuation, doubles</strong> {3}</a></li>
             <li><a href="#remove-extremely-short-comments"><strong>4. Remove extremely short comments</strong></a></li>
             <li><a href="#to-lower-case"><strong>5. To lower case</strong></a></li>
             <li><a href="#record-comment-length"><strong>6. Record comment length</strong></a></li>
@@ -2068,7 +2068,7 @@ border: 0;
             <li><a href="#stop-words-weird-words"><strong>10. Stop words &amp; Weird words</strong></a><ul>
             <li><a href="#what-stop-words-are-and-why-they-matter"><strong>10.1. What stop words are and why they matter</strong></a></li>
             <li><a href="#words-in-tidy-format"><strong>10.2. Words in tidy format</strong></a></li>
-            <li><a href="#creating-a-custom-stopwords-dictionary"><strong>10.3. Creating a custom stopwords dictionary</strong></a></li>
+            <li><a href="#creating-a-custom-stopwords-collection"><strong>10.3. Creating a custom stopwords collection</strong></a></li>
             <li><a href="#filtering-topwords-with-custom-dictionary"><strong>10.4. Filtering topwords with custom dictionary</strong></a></li>
             </ul></li>
             <li><a href="#write-data"><strong>11. Write data</strong></a></li>
@@ -2141,8 +2141,8 @@ border: 0;
 <span id="cb4-4"><a href="#cb4-4"></a>    <span class="dt">review_comment_title =</span> <span class="kw">as.character</span>(review_comment_title)</span>
 <span id="cb4-5"><a href="#cb4-5"></a>        )</span></code></pre></div>
 </div>
-<div id="remove-numbers-punctuation-doubles" class="section level1">
-<h1><strong>3. Remove numbers, punctuation, doubles</strong></h1>
+<div id="remove-numbers-punctuation-doubles-3" class="section level1">
+<h1><strong>3. Remove numbers, punctuation, doubles</strong> {3}</h1>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a><span class="co"># For message</span></span>
 <span id="cb5-2"><a href="#cb5-2"></a>geo_sao_paolo_df  &lt;-<span class="st"> </span>geo_sao_paolo_df <span class="op">%&gt;%</span></span>
 <span id="cb5-3"><a href="#cb5-3"></a><span class="st">  </span><span class="kw">mutate</span>(</span>
@@ -2425,7 +2425,7 @@ border: 0;
 </div>
 <div id="solution-standardization-by-altering-character-encoding" class="section level2">
 <h2><strong>9.3. Solution: standardization by altering character encoding</strong></h2>
-<p>We can’t fix the problem but we can make the situation better from an NLP perspective The diacritic-free variant of a word is the common denominator in a way. The diacritic inconsistency can hence be fixed by turning all text to ASCII character encoding. Yes, we will lose our diacritics but diacritics have a predominantly phonetic utility and don’t change much in terms of semantics. It’s not ideal but it’s the lesser of two evils.</p>
+<p>We can’t fix the problem but we can make the situation better from an NLP perspective. The diacritic-free variant of a word is the common denominator. The diacritic inconsistency can hence be fixed by turning all text to ASCII character encoding. Yes, we will lose our diacritics but diacritics have a predominantly phonetic utility and don’t change much in terms of semantics. It’s not ideal but it’s the lesser of two evils.</p>
 <div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>geo_sao_paolo_df &lt;-<span class="st"> </span>geo_sao_paolo_df <span class="op">%&gt;%</span></span>
 <span id="cb35-2"><a href="#cb35-2"></a><span class="st">  </span><span class="kw">mutate</span>(</span>
 <span id="cb35-3"><a href="#cb35-3"></a>    <span class="co"># Convert message</span></span>
@@ -49776,9 +49776,9 @@ zumax
 </table>
 </div>
 </div>
-<div id="creating-a-custom-stopwords-dictionary" class="section level2">
-<h2><strong>10.3. Creating a custom stopwords dictionary</strong></h2>
-<p><strong>DISCLAIMER:</strong> It’s not really a dictionary as it doesn’t have unique key-value pairs.</p>
+<div id="creating-a-custom-stopwords-collection" class="section level2">
+<h2><strong>10.3. Creating a custom stopwords collection</strong></h2>
+<p>Using a collection of words we deem as ‘stop words’, we can clean the data.</p>
 <p>Initialize empty vector.</p>
 <div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a>dic &lt;-<span class="st"> </span><span class="kw">vector</span>()</span></code></pre></div>
 <p>Add column with info on word length.</p>
@@ -51900,7 +51900,7 @@ zo
 <span id="cb40-4"><a href="#cb40-4"></a><span class="co"># Moving forward, we can filter these out of the tidy df</span></span>
 <span id="cb40-5"><a href="#cb40-5"></a>new_text_df &lt;-<span class="st"> </span>new_text_df <span class="op">%&gt;%</span></span>
 <span id="cb40-6"><a href="#cb40-6"></a><span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span>word_length <span class="op">&lt;</span><span class="st"> </span><span class="dv">3</span>) </span></code></pre></div>
-<p>Filter out words that have more than 2 consecutive characters.</p>
+<p>Filter out words that have more than 2 consecutive characters. Again, in a perfect world we would <em>correct</em> rather than <em>filter</em>. A more sophisticated solution might be used in a later stadium. For now, this sufficies, especially considering that there are relatively few of these cases left after initial filtering in <a href="#3">chapter 3</a>.</p>
 <div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>new_text_df <span class="op">%&gt;%</span></span>
 <span id="cb41-2"><a href="#cb41-2"></a><span class="st">  </span><span class="kw">filter</span>(<span class="kw">grepl</span>(<span class="st">&#39;([a-z</span><span class="ch">\\</span><span class="st">d])</span><span class="ch">\\</span><span class="st">1</span><span class="ch">\\</span><span class="st">1&#39;</span>, word)) <span class="op">%&gt;%</span></span>
 <span id="cb41-3"><a href="#cb41-3"></a><span class="st">  </span><span class="kw">kbl</span>() <span class="op">%&gt;%</span></span>
