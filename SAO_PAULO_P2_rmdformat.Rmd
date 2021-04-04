@@ -33,6 +33,7 @@ library(NLP)
 library(SnowballC)
 library(koRpus)
 library(koRpus.lang.pt)
+library(qdap)
 ```
 
 ```{r Load data}
@@ -382,15 +383,15 @@ print(bad[[1]])
 ```
 
 The dictionary manages to spot the spelling errors. But can it give us legitimate
-suggestions on what the words should be.
+suggestions on what the words should be?
 
 ```{r }
 hunspell_suggest(bad[[1]])
 ```
-In conclusion, we need something else because the dictionary method is going to 
+Apparently, it can't. In conclusion, we need something else because the dictionary method is going to 
 be too unreliable.
 
-## __9.3. Solution: Standardization through character encoding__
+## __9.3. Solution: standardization by altering character encoding__
 
 We can't fix the problem but we can make the situation better from an NLP perspective
 The diacritic-free variant of a word is the common denominator in a way. 
@@ -428,7 +429,7 @@ We want to remove stop words because:
 * doing so decreases data and thereby training time;
 * It removes statistical noise, which can alter outcomes of NLP methods. 
 
-## __10.2. Most frequent words__
+## __10.2. Words in tidy format__
 
 ``` {r}
 text_df <- tibble(line = 1:nrow(geo_sao_paolo_df), 
@@ -444,40 +445,163 @@ new_text_df[-1,] %>%
   scroll_box(height = "500px")
 ```
 
-## __Long words__
+## __10.3. Creating a custom stopwords dictionary__
+__DISCLAIMER:__ It's not really a dictionary as it doesn't have unique key-value pairs.
 
-
-``` {r }
-max(nchar(new_text_df[1,:]))
-
-```
-## __10.3. Unique words__
-
-How many? 
-
-## __10.4. Formulating stop words list__
-
-(stemming and tokenization first!)
-(Use context, so do this after knowledge of late, early, on time)
-``` {r }
-
-stop_words <- c(
-  "e", "o", "a", "do", "de", "que", "no", "um", "" 
-)
-
-freight_words <- c(
-  "chegou", "recebi", "entrega", "prazo"
-)
-
+Initialize empty vector.
+```{r }
+dic <- vector()
 ```
 
+Add column with info on word length.
+``` {r }
+new_text_df <- new_text_df %>%
+  mutate(
+    word_length = nchar(word)
+  )
+```
 
-## __10.5. Filtering out stop words__
+Filter out one- and two-letter words as these don't bring any semantic relevance.
+``` {r }
+# df to capture the words
+super_short_words <- new_text_df %>%
+  filter(word_length < 3) 
+
+# show the words
+super_short_words %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  scroll_box(height = "500px")
+
+# add to dic
+dic <- c(dic, super_short_words$word)
+
+# Moving forward, we can filter these out of the tidy df
+new_text_df <- new_text_df %>%
+  filter(!word_length < 3) 
+
+```
+
+Filter out words that have more than 2 consecutive characters.
+```{r }
+new_text_df %>%
+  filter(grepl('([a-z\\d])\\1\\1', word)) %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  scroll_box(height = "500px")
+
+weird_words <- new_text_df %>%
+  filter(grepl('([a-z\\d])\\1\\1', word))
+
+# add to dic
+dic <- c(dic, weird_words$word)
 
 
-# __11. Writing data__
+# Moving forward, we can filter these out of the tidy df
+new_text_df <- new_text_df %>%
+  filter(!grepl('([a-z\\d])\\1\\1', word))
+```
+
+Words with no vowels
+```{r }
+new_text_df %>%
+  filter(!grepl('[aeiou]+', word)) %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  scroll_box(height = "500px")
+
+no_vowels <- new_text_df %>%
+  filter(!grepl('[aeiou]+', word))
+
+dic <- c(dic, no_vowels$word)
 
 
+new_text_df <- new_text_df %>%
+  filter(grepl('[aeiou]+', word))
+```
+
+Words with only vowels
+```{r }
+new_text_df %>%
+  filter(!grepl('[^aeiou]+', word)) %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  scroll_box(height = "500px")
+
+on_vowels <- new_text_df %>%
+  filter(!grepl('[aeiou]+', word))
+
+dic <- c(dic, on_vowels$word)
+
+new_text_df <- new_text_df %>%
+  filter(grepl('[aeiou]+', word))
+
+```
+
+An additional stopwords list was used with very generic words that are
+'save' for our research context.\n
+
+We want to be careful to take out "nao" from our dic because it is a valence 
+shifter which may be relevant for lexicon-based sentiment analysis.
+
+```{r }
+# external stopwords document tha
+port_stopwords <- read.table("stopwords.txt", sep = "", header=F)
+
+# standardize them
+port_stopwords <- port_stopwords %>%
+  mutate(V1 = iconv(V1, to = "ASCII//TRANSLIT"))
+
+port_stopwords <- port_stopwords %>%
+  filter(!grepl('nao', V1))
+
+dic <- c(dic, port_stopwords$V1)
+```
+Avoid overlap in our dictionary
+```{r }
+dic <- unique(dic)
+```
+
+## __10.4. Filtering topwords with custom dictionary__
+
+```{r eval=FALSE}
+empty_df <- as.data.frame(geo_sao_paolo_df$review_id)
+empty_df$iterator <- c(1:nrow(empty_df))
+empty_df$new_stuff <- 0 
+
+iterator <- 1
+
+for (i in geo_sao_paolo_df$review_comment_message) {
+  print(paste(rm_stopwords(i, dic)[[1]], collapse = " "))
+  empty_df$new_stuff[iterator] <- paste(rm_stopwords(i, dic)[[1]], collapse = " ")
+  iterator = iterator + 1
+}
+geo_sao_paolo_df$review_comment_message <- empty_df$new_stuff
+
+
+
+```
+
+``` {r eval = FALSE, echo=FALSE}
+write.csv(empty_df, "stopword_filtered_sp_reviews.csv")
+```
+
+```{r echo= FALSE}
+empty_df <- read.csv("stopword_filtered_sp_reviews.csv")
+
+empty_df <- empty_df %>%
+  select(-X)
+```
+Replace unfiltered column with filtered comments
+``` {r }
+geo_sao_paolo_df$review_comment_message <- empty_df$new_stuff
+```
+
+# __11. Write data__
+For easy use in another script.
+```{r }
+write.csv(geo_sao_paolo_df,"sp_2_cleaned_text.csv", row.names = FALSE)
+```
 
 
 

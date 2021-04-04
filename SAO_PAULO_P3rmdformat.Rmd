@@ -1,0 +1,99 @@
+---
+title: "Derived variables"
+author: "Michiel van Eldik"
+date: "4/4/2021"
+output:
+   rmdformats::downcute:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+---
+
+# __<a href="index.html">Back to main</a>__
+
+<center> <a href="index.html">Back to main</a> </center>
+
+
+# derived variables
+```{r message = FALSE}
+library(lubridate)
+
+library(dplyr)
+```
+# etc.
+```{r }
+input <- read.csv("sp_2_cleaned_text.csv")
+geo_sao_paolo_df <- input
+```
+# Comment data 
+# Dates data types
+``` {r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    review_creation_date = as.Date(review_creation_date,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    review_answer_timestamp = as.Date(review_answer_timestamp,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_purchase_timestamp = as.Date(order_purchase_timestamp, 
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_approved_at = as.Date(order_approved_at,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_delivered_carrier_date = as.Date(order_delivered_carrier_date,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_delivered_customer_date = as.Date(order_delivered_customer_date,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_estimated_delivery_date = as.Date(order_estimated_delivery_date,
+                                   format = "%Y-%m-%d %H:%M:%S")
+         )
+```
+
+time-relative variables
+``` {r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    diff_est_deliv = order_estimated_delivery_date - order_delivered_customer_date,
+    diff_pur_est  = order_estimated_delivery_date - order_purchase_timestamp,
+    diff_pur_deliv = order_delivered_customer_date - order_purchase_timestamp,
+    diff_rev_crea_ans = review_creation_date - review_answer_timestamp,
+    diff_rev_est_ans = order_estimated_delivery_date - review_answer_timestamp,
+    diff_rev_deliv_ans = order_delivered_customer_date - review_answer_timestamp
+         )
+```
+
+weekend dummies 
+``` {r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    # show weekday of a date
+    review_sent_dow = wday(review_creation_date, label = TRUE),
+    review_answer_dow = wday(review_answer_timestamp, label = TRUE),
+    
+    # Dummy variable weekend yes/no
+    review_sent_wknd = ifelse(
+      review_sent_dow == 'zo' | review_sent_dow == 'za', 1, 0),
+    review_answer_wknd = ifelse(
+      review_answer_dow == 'zo' | review_answer_dow == 'za', 1, 0)
+         )
+```
+
+Year dummies 
+``` {r }
+geo_sao_paolo_df<- geo_sao_paolo_df %>%
+  mutate(
+    y_2016 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0),
+    y_2017 = ifelse(year(order_purchase_timestamp) == '2017', 1, 0),
+    y_2018 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0)
+         )
+```
+
+# Duplicates in customer cities (other script) 
+
+
+
+# Past behaviour of customer
+
+* previous recensy 
+* frequency
+* new_yes/no
