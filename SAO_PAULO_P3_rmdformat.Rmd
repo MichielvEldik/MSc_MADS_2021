@@ -1,0 +1,205 @@
+---
+title: "Derived variables"
+author: "Michiel van Eldik"
+date: "`r Sys.Date()`"
+output:
+   rmdformats::downcute:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+---
+
+# __<a href="index.html">Back to main</a>__
+
+<center> <a href="index.html">Back to main</a> </center>
+
+
+# __1. Load data and libraries__
+
+```{r message = FALSE}
+library(lubridate)
+library(dplyr)
+library(kableExtra)
+```
+
+```{r }
+input <- read.csv("sp_2_cleaned_text.csv")
+geo_sao_paolo_df <- input
+```
+
+# __2. Dates data__
+## __2.1. Convert to 'date' type__
+``` {r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    review_creation_date = as.Date(review_creation_date,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    review_answer_timestamp = as.Date(review_answer_timestamp,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_purchase_timestamp = as.Date(order_purchase_timestamp, 
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_approved_at = as.Date(order_approved_at,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_delivered_carrier_date = as.Date(order_delivered_carrier_date,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_delivered_customer_date = as.Date(order_delivered_customer_date,
+                                   format = "%Y-%m-%d %H:%M:%S"),
+    order_estimated_delivery_date = as.Date(order_estimated_delivery_date,
+                                   format = "%Y-%m-%d %H:%M:%S")
+         )
+```
+
+## __2.2. Response time-related variables__
+
+``` {r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    diff_est_deliv = order_estimated_delivery_date - order_delivered_customer_date,
+    diff_pur_est  = order_estimated_delivery_date - order_purchase_timestamp,
+    diff_pur_deliv = order_delivered_customer_date - order_purchase_timestamp,
+    diff_rev_crea_ans = review_creation_date - review_answer_timestamp,
+    diff_rev_est_ans = order_estimated_delivery_date - review_answer_timestamp,
+    diff_rev_deliv_ans = order_delivered_customer_date - review_answer_timestamp
+         )
+```
+
+## __2.3. Date characteristics variables__
+Weekend dummies. 
+``` {r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(
+    # show weekday of a date
+    review_sent_dow = wday(review_creation_date, label = TRUE),
+    review_answer_dow = wday(review_answer_timestamp, label = TRUE),
+    
+    # Dummy variable weekend yes/no
+    review_sent_wknd = ifelse(
+      review_sent_dow == 'zo' | review_sent_dow == 'za', 1, 0),
+    review_answer_wknd = ifelse(
+      review_answer_dow == 'zo' | review_answer_dow == 'za', 1, 0)
+         )
+```
+
+Year dummies.
+``` {r }
+geo_sao_paolo_df<- geo_sao_paolo_df %>%
+  mutate(
+    y_2016 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0),
+    y_2017 = ifelse(year(order_purchase_timestamp) == '2017', 1, 0),
+    y_2018 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0)
+         )
+```
+
+# __3. Reviews data__
+This is an enormously important part of the research project because in this 
+part, the target variable _review creation_ is defined. It begs the question:
+What can be considered as the creation of a qualitative review?\n
+
+Technically, each case where`review_comment_message` is not null can 
+be considered as a case that has created a qualitative review. That definition
+imples a single word like 'bom' would qualify as a qualitative review. But 
+does review that is not even a phrase really provide information _beyond_ the 
+qualitative review? It's an important question because, ultimately, the added
+benefit of qualitative reviews is to disambiguate quantitative review.\n
+
+Firstly, a single word _can_ help to disambiguate a qualitative review. E.g.,
+two groups of customers from two different cultures differ in average rating by
+1 point on a 5-point Likert scale. Now imagine that all of their quantitative 
+reviews are accompanied by the word "boa" (highly hypothetical). In this case, 
+the qualitative part of the review reveals to us that perhaps these two groups
+have different perceptions of how "boa" relates to a 5-point Likert scale. Hence,
+even from one-word comments, information can be derived.\n
+
+Given this notion, even single-word texts are included in the 
+definition of _review creation_. Nevertheless, the aspect of message length
+and word quantities will still be included in the dataset as it may help in 
+explaining outcomes.
+
+## __3.1. Message & Title Dummies__
+```{r }
+# Create dummy for message vs no message
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(review_comment_message = as.character(review_comment_message)) %>%
+  mutate(message_length = nchar(review_comment_message)) %>%
+  mutate(message_bool = ifelse(message_length == 0, 0, 1)) %>%
+  mutate(message_bool = as.integer(message_bool))
+
+# Create a dummy variable for title message
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(review_comment_title = as.character(review_comment_title)) %>%
+  mutate(title_length = nchar(review_comment_title)) %>%
+  mutate(title_bool = ifelse(title_length == 0, 0, 1)) %>%
+  mutate(title_bool = as.integer(title_bool))
+
+# Create a dummy variable for title OR, AND message
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(title_or_message = ifelse(message_bool == 1 | title_bool == 1, 1, 0)) %>%
+  mutate(title_and_message = ifelse(message_bool == 1 & title_bool == 1, 1, 0))
+```
+
+## __3.2. Top-2-Box discretization__
+
+```{r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+  mutate(top2box = ifelse(review_score > 3, 1, 0))
+```
+
+# __4. Products data__
+## __4.1. Product categories in the data__
+
+There is a whole bunch of product categories. 
+```{r }
+table(geo_sao_paolo_df$product_category_name)
+
+product_cats <- geo_sao_paolo_df %>%
+  group_by(product_category_name) %>%
+  summarise(
+    freq = n()
+  )
+
+```
+
+```{r }
+product_cats %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  scroll_box(height = "500px")
+
+```
+
+## __4.2. SEC classifications__
+```{r }
+print("Work in progress")
+
+```
+
+## __4.3. Perceived risk classification__
+
+```{r }
+
+print("Work in progress")
+
+```
+
+
+# __5. Individual level customer data__
+
+The individual customer can carry characteristics. Mainly:
+
+* Whether that person had a drastic experience before 
+* How recent this experience was 
+* Whether there is a record of previous comments
+
+```{r }
+print("Work in Progress")
+```
+
+
+
+# __6. Write file__
+
+```{r }
+write.csv(geo_sao_paolo_df, "sp_3_derived_vars.csv")
+```

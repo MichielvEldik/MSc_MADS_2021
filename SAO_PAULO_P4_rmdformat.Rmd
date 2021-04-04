@@ -1,0 +1,251 @@
+---
+title: "External merge and first insights"
+author: "Michiel van Eldik"
+date: "`r Sys.Date()`"
+output:
+   rmdformats::downcute:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+---
+
+# __<a href="index.html">Back to main</a>__
+
+<center> <a href="index.html">Back to main</a> </center>
+
+
+# __1. Load data and libraries__
+
+```{r message = FALSE}
+library(lubridate)
+library(dplyr)
+library(kableExtra)
+library(sf)
+library(sp)
+library(rgdal)
+library(spatialEco)
+library(revgeo)
+library(car)
+```
+
+```{r }
+input <- read.csv("sp_3_derived_vars.csv")
+```
+
+```{r }
+geo_sao_paolo_df <- input
+```
+
+
+## __2. Connect to shapefile to assign municiaplity to cases__
+There are a few NAs for the coordinates. We'll move on without them for now.
+```{r }
+
+print(nrow(geo_sao_paolo_df[is.na(geo_sao_paolo_df$centroid_lat),]))
+
+geo_sao_paolo_df <- geo_sao_paolo_df[!is.na(geo_sao_paolo_df$centroid_lat),]
+
+```
+Turn them into coordinate system (or something)
+```{r }
+coordinates(geo_sao_paolo_df) = c('centroid_long', 'centroid_lat')
+```
+
+
+We are using the 'regular' reference system,
+```{r }
+# assign coordinate system 
+crs.geo1 = CRS("+proj=longlat")
+proj4string(geo_sao_paolo_df) = crs.geo1
+```
+
+```{r }
+# Load shapefile 
+# state map
+sp_map_2 <- readOGR('sao_paulo.shp')
+```
+
+All data points distributed throughout the municipalities of Sao Paulo state.
+```{r }
+plot(sp_map_2)
+points(geo_sao_paolo_df)
+```
+
+Municipality name connected to original data
+```{r }
+# Connect shapefile polygon data on municipality classification with our point data
+new_guy <- point.in.poly(geo_sao_paolo_df, sp_map_2)
+
+# transform it back to a normal dataframe in order to do further merging and analyses
+new_guy_df <- as.data.frame(new_guy)
+
+```
+
+
+## __3. Incorporate municipality-level HDI__
+```{r }
+muni_hdi_sp_state <- read.csv('sp_state_municipalities_hdi.csv', header = FALSE)
+```
+
+Standardize data for merge
+```{r }
+# standardize words with weird Portuguese characters and accents
+muni_hdi_sp_state$V1 <- iconv(muni_hdi_sp_state$V1, to = 'ASCII//TRANSLIT')
+# to lower case
+muni_hdi_sp_state$V1 <- tolower(muni_hdi_sp_state$V1)
+```
+Same for other data. 
+```{r }
+# Unfortunately, there are still a bunch of NAs 
+new_guy_df$NOMEMUNICP <- iconv(new_guy_df$NOMEMUNICP, to = 'ASCII//TRANSLIT')
+new_guy_df$NOMEMUNICP <- tolower(new_guy_df$NOMEMUNICP)
+```
+
+Merge! 
+```{r }
+merry <- merge(new_guy_df,
+               muni_hdi_sp_state,
+               by.x = 'NOMEMUNICP',
+               by.y = 'V1',
+               all.x = TRUE)
+```
+
+## __4. First analyses__
+
+## __4.1. Comparing HDI and commenting behaviour__
+
+```{r }
+bmod <- glm(title_or_message ~ log(V2), na.action=na.exclude, data = merry[merry$customer_city != 'sao paulo',], family = 'binomial')
+print(summary(bmod))
+```
+
+Interestingly there is a negative correlation between creation of reviews and 
+human development index. That means a lower HDI leads to a higher probability of
+creating a review. There can be many explanations for this:
+
+* Lower HDIs are prone to delays, causing more tardiness and more reviews. 
+* Expected delivery times are calculated with more 'space' because delivery times
+on these routes are more volatiles. In that case, there might be a lot of early 
+deliveries, causing people to be happily surprised and commenting.
+* HDI is related to product category, which in turn can be related to comment 
+propensity. 
+
+
+__Interestingly__ mean number of words is positively related to HDI if we take
+the non-respondents out of the equation. 
+
+
+```{r }
+lmod <- lm(log(bef_nchar) ~ log(V2), 
+           na.action=na.exclude, 
+           data = merry[merry$bef_nchar > 0,])
+print(summary(lmod))
+```
+
+Same for number of words.
+```{r }
+lmod <- lm(log(bef_nwords) ~ log(V2), 
+           na.action=na.exclude, 
+           data = merry[merry$bef_nchar > 0,])
+print(summary(lmod))
+```
+
+No evidence that HDI is related to average word length.
+```{r }
+lmod <- lm(log(nchar_perword) ~ log(V2), 
+           na.action=na.exclude, 
+           data = merry[merry$bef_nchar > 0,])
+print(summary(lmod))
+```
+
+## __4.2. Other variables affecting review creation__
+__Sao Paulo__ is excluded as it is a huge city that should be looked at in more detail.
+```{r }
+bmod <- glm(message_bool ~ log(V2) + item_count + max_price + review_sent_wknd + review_score + log(diff_est_deliv + 176),
+            na.action=na.exclude, 
+            data = merry[merry$customer_city != 'sao paulo',], family = 'binomial')
+print(summary(bmod))
+print(vif(bmod))
+```
+
+
+Some interesting results already! 
+
+* Negative reviews make for higher creation probability
+* Positive correlation between diff_est_deliv and review probability because
+a higher value for this variable implies there was a large difference between
+estimated delivery time and actual delivery time. I.e., being too late (too early 
+are indicated with negative)
+* V2 signifies HDI. Lower HDI means higher probability of review creation for 
+some reason I don't know yet. It's opposite of what I expected.
+* Higher prices and item counts elicite review creation.
+
+
+Takeaways:
+
+* The weird outcome for relationship between review creation and HDI can be due
+to the __age__ factor. because younger people are more inclined to use the 
+internet and low-HDI areas tend to have a lower age pyramid distribution. 
+* There are many deliveries that were reported in the comments as too late, but
+that are indicated in delivery data as on-time. It's important to deal with this.
+* In general, it's important to be able to label what the topic of conversation is.
+
+
+I plan to do this by building a text classifier that classifies whether a comment
+is frieght related by basing it on data that are confirmed to be delayed.\n
+
+Moving on... Let's have a look at product categories.
+
+```{r }
+bmod <- glm(message_bool ~ product_category_name,
+            na.action=na.exclude, 
+            data = merry[merry$customer_city != 'sao paulo',], family = 'binomial')
+print(summary(bmod))
+```
+
+There is too muchgoing on to really say anything at this point. 
+The data need to be classified into categorizations and then we can actually derive 
+meaning from this. However, what is notable:
+
+* __construction_tools_safety__ is a relatively small (n = 56) category but 
+seems to evoke comments quite strongly. 
+* __home_comfort__ also is not a huge (n=174) category, but has a strong effect.
+* Same story for __male clothing__ that has only n = 48.
+
+
+## __4.3. Other variables affecting review length__
+
+```{r }
+lmod <- lm(log(bef_nchar) ~ log(V2) + diff_rev_crea_ans + review_sent_wknd + max_price + review_answer_wknd + diff_est_deliv + top2box, 
+           na.action=na.exclude, 
+           data = merry[merry$bef_nchar > 0,])
+print(summary(lmod))
+print(vif(lmod))
+```
+
+Takeaways... 
+
+* Lower review scores elecit longer messages, accounting for the fact that "0" 
+length messages are not in the equation.
+* Higher priced products elicit longer messages.
+* Higher HDI elicits longer messages. 
+
+# __5. Moving forward__
+
+There is still a lot of work to do, especially in the area of categorizing comments; 
+factoring things like 'age' into the equation; looking at other states; comparing 
+urbanity; looking at neighborhood level; classifying products; etc.\n
+
+What I'm thinking about the most is the negative statistical relationship 
+between HDI and revieww creation and the positive relationship between HDI and 
+review length. The __age distribution__ account is something to explore. Moreover,
+this is an extremely limited analysis because it assumes one level of data 
+whilst in actuality, we have nested data because we are using municipal-level 
+data and individual-level data.\n
+
+Be that as it may, we have a nice beginning. Even for a state like Sao Paulo, 
+which has mostly municipalities on the higher end of the HDI spectrum, we can 
+see that there is indeed enough variance to get to some interesting insights.
+
