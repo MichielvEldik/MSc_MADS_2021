@@ -415,7 +415,7 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
 
 
 
-# __10. Stop words__
+# __10. Stop words & Weird words__
 
 ## __10.1. What stop words are and why they matter__
 The definition of "stop word" is important because removing stop words is a 
@@ -430,19 +430,27 @@ We want to remove stop words because:
 
 ## __10.2. Most frequent words__
 
-
 ``` {r}
-text_df <- tibble(line = 1:41638, 
+text_df <- tibble(line = 1:nrow(geo_sao_paolo_df), 
                   text = as.character(geo_sao_paolo_df$review_comment_message))
 
 new_text_df <- text_df %>%
   unnest_tokens(word, text) %>%
   count(word, sort = TRUE)
 
-head(new_text_df[-1,])
+new_text_df[-1,] %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  scroll_box(height = "500px")
 ```
 
+## __Long words__
 
+
+``` {r }
+max(nchar(new_text_df[1,:]))
+
+```
 ## __10.3. Unique words__
 
 How many? 
@@ -454,7 +462,7 @@ How many?
 ``` {r }
 
 stop_words <- c(
-  "e", "o", "a", "do", "de", "que", "no", "um" 
+  "e", "o", "a", "do", "de", "que", "no", "um", "" 
 )
 
 freight_words <- c(

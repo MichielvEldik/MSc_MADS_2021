@@ -2129,9 +2129,8 @@ border: 0;
 <p>The fact that a unique order_id is associated with more than 1 unique review_id can be explained by a customer receiving multiple review requests for a multi-item order. An example from the reviews_df datatable</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a><span class="co"># based on the reviews data </span></span>
 <span id="cb3-2"><a href="#cb3-2"></a>reviews_df[,<span class="dv">1</span><span class="op">:</span><span class="dv">3</span>][reviews_df<span class="op">$</span>order_id <span class="op">==</span><span class="st"> &#39;78cf5dc2baadfbac2c47c6ef7c2a2282&#39;</span>,] <span class="op">%&gt;%</span></span>
-<span id="cb3-3"><a href="#cb3-3"></a><span class="st">  </span><span class="kw">kbl</span>() <span class="op">%&gt;%</span></span>
-<span id="cb3-4"><a href="#cb3-4"></a><span class="st">  </span><span class="kw">kable_material</span>(<span class="kw">c</span>(<span class="st">&quot;striped&quot;</span>, <span class="st">&quot;hover&quot;</span>))</span></code></pre></div>
-<table class=" lightable-material lightable-striped lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<span id="cb3-3"><a href="#cb3-3"></a><span class="st">  </span><span class="kw">kbl</span>()</span></code></pre></div>
+<table>
 <thead>
 <tr>
 <th style="text-align:left;">
@@ -2194,9 +2193,8 @@ review_score
 <span id="cb6-5"><a href="#cb6-5"></a>                       <span class="dt">all.x =</span> <span class="ot">TRUE</span>)</span>
 <span id="cb6-6"><a href="#cb6-6"></a><span class="co"># show table</span></span>
 <span id="cb6-7"><a href="#cb6-7"></a>example_merge[,<span class="kw">c</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">2</span>,<span class="dv">9</span>)][example_merge<span class="op">$</span>order_id <span class="op">==</span><span class="st"> &#39;78cf5dc2baadfbac2c47c6ef7c2a2282&#39;</span>,]  <span class="op">%&gt;%</span></span>
-<span id="cb6-8"><a href="#cb6-8"></a><span class="st">  </span><span class="kw">kbl</span>() <span class="op">%&gt;%</span></span>
-<span id="cb6-9"><a href="#cb6-9"></a><span class="st">  </span><span class="kw">kable_material</span>(<span class="kw">c</span>(<span class="st">&quot;striped&quot;</span>, <span class="st">&quot;hover&quot;</span>))</span></code></pre></div>
-<table class=" lightable-material lightable-striped lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<span id="cb6-8"><a href="#cb6-8"></a><span class="st">  </span><span class="kw">kbl</span>()</span></code></pre></div>
+<table>
 <thead>
 <tr>
 <th style="text-align:left;">
@@ -2254,9 +2252,8 @@ bdced1e75dafe66bd70dc84af644bca7
 <p>The second ‘complexity’ in merging <code>review_df</code> with <code>orders_df</code> is that a single review can be associated to multiple orders. An example from the case:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a><span class="co"># based on the reviews data</span></span>
 <span id="cb7-2"><a href="#cb7-2"></a>reviews_df[,<span class="dv">1</span><span class="op">:</span><span class="dv">3</span>][reviews_df<span class="op">$</span>review_id <span class="op">==</span><span class="st"> &#39;ed42ec3f63f7ff98ae6fc1562d61d1fe&#39;</span>,] <span class="op">%&gt;%</span></span>
-<span id="cb7-3"><a href="#cb7-3"></a><span class="st">  </span><span class="kw">kbl</span>() <span class="op">%&gt;%</span></span>
-<span id="cb7-4"><a href="#cb7-4"></a><span class="st">  </span><span class="kw">kable_material</span>(<span class="kw">c</span>(<span class="st">&quot;striped&quot;</span>, <span class="st">&quot;hover&quot;</span>))</span></code></pre></div>
-<table class=" lightable-material lightable-striped lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<span id="cb7-3"><a href="#cb7-3"></a><span class="st">  </span><span class="kw">kbl</span>()</span></code></pre></div>
+<table>
 <thead>
 <tr>
 <th style="text-align:left;">
@@ -2322,9 +2319,8 @@ de4887366c9ddf1dd93719769e1bc533
 <span id="cb10-4"><a href="#cb10-4"></a>                       <span class="dt">by.y =</span> <span class="st">&#39;order_id&#39;</span>,</span>
 <span id="cb10-5"><a href="#cb10-5"></a>                       <span class="dt">all.x =</span> <span class="ot">TRUE</span>)</span>
 <span id="cb10-6"><a href="#cb10-6"></a>example_merge_<span class="dv">2</span>[,<span class="dv">1</span><span class="op">:</span><span class="dv">3</span>][example_merge_<span class="dv">2</span><span class="op">$</span>review_id <span class="op">==</span><span class="st"> &#39;ed42ec3f63f7ff98ae6fc1562d61d1fe&#39;</span>,] <span class="op">%&gt;%</span></span>
-<span id="cb10-7"><a href="#cb10-7"></a><span class="st">  </span><span class="kw">kbl</span>() <span class="op">%&gt;%</span></span>
-<span id="cb10-8"><a href="#cb10-8"></a><span class="st">  </span><span class="kw">kable_material</span>(<span class="kw">c</span>(<span class="st">&quot;striped&quot;</span>, <span class="st">&quot;hover&quot;</span>))</span></code></pre></div>
-<table class=" lightable-material lightable-striped lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<span id="cb10-7"><a href="#cb10-7"></a><span class="st">  </span><span class="kw">kbl</span>()</span></code></pre></div>
+<table>
 <thead>
 <tr>
 <th style="text-align:left;">
@@ -2390,23 +2386,24 @@ ed42ec3f63f7ff98ae6fc1562d61d1fe
 <span id="cb12-4"><a href="#cb12-4"></a>                              <span class="dt">by.y =</span> <span class="st">&#39;order_id&#39;</span>,</span>
 <span id="cb12-5"><a href="#cb12-5"></a>                              <span class="dt">all.x =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 <p>The last merge is with the current dataset and <code>products_df</code>.</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a><span class="co"># first merge the translation of product categories from Portugues to English with products_df</span></span>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a><span class="co"># merge the translation of product categories  with products_df</span></span>
 <span id="cb13-2"><a href="#cb13-2"></a>translated_products_df &lt;-<span class="st"> </span><span class="kw">merge</span>(products_df, </span>
 <span id="cb13-3"><a href="#cb13-3"></a>                     translate_df, </span>
 <span id="cb13-4"><a href="#cb13-4"></a>                     <span class="dt">by.x =</span> <span class="st">&#39;product_category_name&#39;</span>, </span>
 <span id="cb13-5"><a href="#cb13-5"></a>                     <span class="dt">by.y =</span> <span class="st">&#39;product_category_name&#39;</span>, </span>
 <span id="cb13-6"><a href="#cb13-6"></a>                     <span class="dt">all.x =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb13-7"><a href="#cb13-7"></a><span class="co"># replace Portuguese category names with English translations of them</span></span>
-<span id="cb13-8"><a href="#cb13-8"></a>translated_products_df<span class="op">$</span>product_category_name &lt;-<span class="st"> </span>translated_products_df<span class="op">$</span>product_category_name_english</span>
-<span id="cb13-9"><a href="#cb13-9"></a><span class="co"># drop redundant column</span></span>
-<span id="cb13-10"><a href="#cb13-10"></a>translated_products_df &lt;-<span class="st"> </span>translated_products_df[,<span class="dv">1</span><span class="op">:</span><span class="dv">9</span>]</span>
-<span id="cb13-11"><a href="#cb13-11"></a></span>
-<span id="cb13-12"><a href="#cb13-12"></a><span class="co"># Connect with the review + order + items dataframe to create a semi-complete df</span></span>
-<span id="cb13-13"><a href="#cb13-13"></a>semi_df &lt;-<span class="st"> </span><span class="kw">merge</span>(revord_plus_items_df, </span>
-<span id="cb13-14"><a href="#cb13-14"></a>                 translated_products_df, </span>
-<span id="cb13-15"><a href="#cb13-15"></a>                 <span class="dt">by.x =</span> <span class="st">&#39;product_id&#39;</span>, </span>
-<span id="cb13-16"><a href="#cb13-16"></a>                 <span class="dt">by.y =</span> <span class="st">&#39;product_id&#39;</span>, </span>
-<span id="cb13-17"><a href="#cb13-17"></a>                 <span class="dt">all.x =</span> <span class="ot">TRUE</span>) <span class="co"># to keep the reviews that aren&#39;t associated with a product_id in </span></span></code></pre></div>
+<span id="cb13-7"><a href="#cb13-7"></a></span>
+<span id="cb13-8"><a href="#cb13-8"></a><span class="co"># replace Portuguese category names with English translations of them</span></span>
+<span id="cb13-9"><a href="#cb13-9"></a>translated_products_df<span class="op">$</span>product_category_name &lt;-<span class="st"> </span>translated_products_df<span class="op">$</span>product_category_name_english</span>
+<span id="cb13-10"><a href="#cb13-10"></a><span class="co"># drop redundant column</span></span>
+<span id="cb13-11"><a href="#cb13-11"></a>translated_products_df &lt;-<span class="st"> </span>translated_products_df[,<span class="dv">1</span><span class="op">:</span><span class="dv">9</span>]</span>
+<span id="cb13-12"><a href="#cb13-12"></a></span>
+<span id="cb13-13"><a href="#cb13-13"></a><span class="co"># Connect with the review + order + items dataframe to create a semi-complete df</span></span>
+<span id="cb13-14"><a href="#cb13-14"></a>semi_df &lt;-<span class="st"> </span><span class="kw">merge</span>(revord_plus_items_df, </span>
+<span id="cb13-15"><a href="#cb13-15"></a>                 translated_products_df, </span>
+<span id="cb13-16"><a href="#cb13-16"></a>                 <span class="dt">by.x =</span> <span class="st">&#39;product_id&#39;</span>, </span>
+<span id="cb13-17"><a href="#cb13-17"></a>                 <span class="dt">by.y =</span> <span class="st">&#39;product_id&#39;</span>, </span>
+<span id="cb13-18"><a href="#cb13-18"></a>                 <span class="dt">all.x =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 <p>Now comes the fun part: writing an algorithm that decides which <code>order_id</code> will be attributed to all of the duplicate <code>review_id</code>s. For starters, we have already identified our ‘culprits’ before, let’s store them in a vector:</p>
 <div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>multiples_cases_rev_df &lt;-<span class="st"> </span>reviews_df <span class="op">%&gt;%</span></span>
 <span id="cb14-2"><a href="#cb14-2"></a><span class="st">  </span><span class="kw">group_by</span>(review_id) <span class="op">%&gt;%</span><span class="st"> </span></span>
@@ -2479,9 +2476,8 @@ ed42ec3f63f7ff98ae6fc1562d61d1fe
 <li>This needs to be adjusted to having only 1 <code>order_id</code> associated with the <code>review_id</code>.</li>
 </ul>
 <div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>reviews_df[,<span class="dv">1</span><span class="op">:</span><span class="dv">3</span>][reviews_df<span class="op">$</span>review_id <span class="op">==</span><span class="st"> &#39;ed42ec3f63f7ff98ae6fc1562d61d1fe&#39;</span>,] <span class="op">%&gt;%</span></span>
-<span id="cb23-2"><a href="#cb23-2"></a><span class="st">  </span><span class="kw">kbl</span>() <span class="op">%&gt;%</span></span>
-<span id="cb23-3"><a href="#cb23-3"></a><span class="st">  </span><span class="kw">kable_material</span>(<span class="kw">c</span>(<span class="st">&quot;striped&quot;</span>, <span class="st">&quot;hover&quot;</span>))</span></code></pre></div>
-<table class=" lightable-material lightable-striped lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<span id="cb23-2"><a href="#cb23-2"></a><span class="st">  </span><span class="kw">kbl</span>()</span></code></pre></div>
+<table>
 <thead>
 <tr>
 <th style="text-align:left;">
@@ -2534,9 +2530,8 @@ de4887366c9ddf1dd93719769e1bc533
 <li>As you can see, there are no more duplicates for the <code>review_id</code>.</li>
 </ul>
 <div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>happy_days[,<span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">7</span>, <span class="dv">2</span>)][happy_days<span class="op">$</span>review_id <span class="op">==</span><span class="st"> &#39;ed42ec3f63f7ff98ae6fc1562d61d1fe&#39;</span>,] <span class="op">%&gt;%</span></span>
-<span id="cb24-2"><a href="#cb24-2"></a><span class="st">  </span><span class="kw">kbl</span>() <span class="op">%&gt;%</span></span>
-<span id="cb24-3"><a href="#cb24-3"></a><span class="st">  </span><span class="kw">kable_material</span>(<span class="kw">c</span>(<span class="st">&quot;striped&quot;</span>, <span class="st">&quot;hover&quot;</span>))</span></code></pre></div>
-<table class=" lightable-material lightable-striped lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<span id="cb24-2"><a href="#cb24-2"></a><span class="st">  </span><span class="kw">kbl</span>()</span></code></pre></div>
+<table>
 <thead>
 <tr>
 <th style="text-align:left;">
@@ -2574,9 +2569,8 @@ ed42ec3f63f7ff98ae6fc1562d61d1fe
 <li>we can see that indeed the <code>order_id</code> that was chosen by the algorithm is connected to the order with highest <code>price</code>.</li>
 </ul>
 <div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>semi_df[, <span class="kw">c</span>(<span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">19</span>)][semi_df<span class="op">$</span>review_id <span class="op">==</span><span class="st"> &#39;ed42ec3f63f7ff98ae6fc1562d61d1fe&#39;</span>,] <span class="op">%&gt;%</span></span>
-<span id="cb25-2"><a href="#cb25-2"></a><span class="st">  </span><span class="kw">kbl</span>() <span class="op">%&gt;%</span></span>
-<span id="cb25-3"><a href="#cb25-3"></a><span class="st">  </span><span class="kw">kable_material</span>(<span class="kw">c</span>(<span class="st">&quot;striped&quot;</span>, <span class="st">&quot;hover&quot;</span>))</span></code></pre></div>
-<table class=" lightable-material lightable-striped lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<span id="cb25-2"><a href="#cb25-2"></a><span class="st">  </span><span class="kw">kbl</span>()</span></code></pre></div>
+<table>
 <thead>
 <tr>
 <th style="text-align:left;">
@@ -2653,9 +2647,8 @@ de4887366c9ddf1dd93719769e1bc533
 </p>
 <p>An order with 21 items implies that a single review will be represented 21 times in the dataset.</p>
 <div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>roi_df[, <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">16</span>)][roi_df<span class="op">$</span>order_id.y <span class="op">==</span><span class="st"> &#39;8272b63d03f5f79c56e9e4120aec44ef&#39;</span>,] <span class="op">%&gt;%</span></span>
-<span id="cb31-2"><a href="#cb31-2"></a><span class="st">  </span><span class="kw">kbl</span>() <span class="op">%&gt;%</span></span>
-<span id="cb31-3"><a href="#cb31-3"></a><span class="st">  </span><span class="kw">kable_material</span>(<span class="kw">c</span>(<span class="st">&quot;striped&quot;</span>, <span class="st">&quot;hover&quot;</span>))</span></code></pre></div>
-<table class=" lightable-material lightable-striped lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<span id="cb31-2"><a href="#cb31-2"></a><span class="st">  </span><span class="kw">kbl</span>()</span></code></pre></div>
+<table>
 <thead>
 <tr>
 <th style="text-align:left;">

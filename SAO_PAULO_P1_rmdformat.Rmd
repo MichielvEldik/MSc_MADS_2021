@@ -68,8 +68,7 @@ An example from the reviews_df datatable\n
 ```{r }
 # based on the reviews data 
 reviews_df[,1:3][reviews_df$order_id == '78cf5dc2baadfbac2c47c6ef7c2a2282',] %>%
-  kbl() %>%
-  kable_material(c("striped", "hover"))
+  kbl()
 ```
 The main issue lies in the fact that `review_id` can't be linked to different `product_ids` within the same `order_id` because the datatables are joined using `order_id`.\n  
 
@@ -91,8 +90,7 @@ example_merge <- merge(orders_df,
                        all.x = TRUE)
 # show table
 example_merge[,c(1:2,9)][example_merge$order_id == '78cf5dc2baadfbac2c47c6ef7c2a2282',]  %>%
-  kbl() %>%
-  kable_material(c("striped", "hover"))
+  kbl()
 ```
 
 * __The result:__ Whereas there is in actuality only 1 order and therefore supposed to be 1 row for each unique `order_id`, the merge has caused this to become more than 1 in the new datatable.\n
@@ -109,8 +107,7 @@ An example from the case:
 ```{r }
 # based on the reviews data
 reviews_df[,1:3][reviews_df$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
-  kbl() %>%
-  kable_material(c("striped", "hover"))
+  kbl()
 ```
 
 Apparently, 802 unique review_ids are connected to more than one unique `order_id`. 
@@ -137,8 +134,7 @@ example_merge_2 <- merge(reviews_df,
                        by.y = 'order_id',
                        all.x = TRUE)
 example_merge_2[,1:3][example_merge_2$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
-  kbl() %>%
-  kable_material(c("striped", "hover"))
+  kbl()
 ```
 
 __The result:__ All cases for which this issue occurs will be represented by >1 rows in the resulting dataset. I.e., we would end up with duplicates in the `review_id` column.\n
@@ -171,12 +167,13 @@ revord_plus_items_df <- merge(reviews_plus_orders_df,
 The last merge is with the current dataset and `products_df`.
 
 ```{r }
-# first merge the translation of product categories from Portugues to English with products_df
+# merge the translation of product categories  with products_df
 translated_products_df <- merge(products_df, 
                      translate_df, 
                      by.x = 'product_category_name', 
                      by.y = 'product_category_name', 
                      all.x = TRUE)
+
 # replace Portuguese category names with English translations of them
 translated_products_df$product_category_name <- translated_products_df$product_category_name_english
 # drop redundant column
@@ -187,7 +184,7 @@ semi_df <- merge(revord_plus_items_df,
                  translated_products_df, 
                  by.x = 'product_id', 
                  by.y = 'product_id', 
-                 all.x = TRUE) # to keep the reviews that aren't associated with a product_id in 
+                 all.x = TRUE)
 ```
 
 Now comes the fun part: writing an algorithm that decides which `order_id` will be attributed to all of the duplicate `review_id`s.\n
@@ -277,8 +274,7 @@ __Before:__
 * This needs to be adjusted to having only 1 `order_id` associated with the `review_id`.
 ```{r }
 reviews_df[,1:3][reviews_df$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
-  kbl() %>%
-  kable_material(c("striped", "hover"))
+  kbl()
 ```
 
 ```{r include = FALSE, eval = FALSE}
@@ -294,8 +290,7 @@ __After:__
 * As you can see, there are no more duplicates for the `review_id`.
 ```{r }
 happy_days[,c(1, 7, 2)][happy_days$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
-  kbl() %>%
-  kable_material(c("striped", "hover"))
+  kbl()
 ```
 
 ```{r include = FALSE, eval = FALSE}
@@ -309,8 +304,7 @@ __Proof:__
 * we can see that indeed the `order_id` that was chosen by the algorithm is connected to the order with highest `price`.
 ```{r }
 semi_df[, c(3, 2, 19)][semi_df$review_id == 'ed42ec3f63f7ff98ae6fc1562d61d1fe',] %>%
-  kbl() %>%
-  kable_material(c("striped", "hover"))
+  kbl()
 ```
 
 Let's merge properly now. \n
@@ -349,8 +343,7 @@ Case and point:\
 An order with 21 items implies that a single review will be represented 21 times in the dataset.
 ```{r }
 roi_df[, c(1, 2, 16)][roi_df$order_id.y == '8272b63d03f5f79c56e9e4120aec44ef',] %>%
-  kbl() %>%
-  kable_material(c("striped", "hover"))
+  kbl()
 ```
 
 The example is a multi-item order that also has more than 1 different `product_id`s associated with it.\n
@@ -367,8 +360,7 @@ length(unique(mullies_df[!duplicated(mullies_df), ]$review_id))
 ```{r include = FALSE, eval = FALSE}
 # another example
 roi_df[, c(1, 2, 16)][roi_df$order_id.y == '93f27293d6f1881d4784abaf47d53ffe',] %>%
-  kbl() %>%
-  kable_material(c("striped", "hover"))
+  kbl()
 ```
 Data are currently at an order_line level of disaggregation. Data must be aggregated to the level of our unit of analysis: `review_id`. This can be done by:
 
