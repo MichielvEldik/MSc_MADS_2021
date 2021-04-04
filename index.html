@@ -1,8 +1,11 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>Consumers Left on the Sideline: A Spatial Explanation of why Some Choose to Write Online Reviews and Others Don't.</title>
-	<style type = "text/css">
+<html lang="en">
+<head>
+<title>CSS Template</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+
 		a:link, a:visited {
   background-color: #f44336;
   color: white;
@@ -12,45 +15,115 @@
   display: inline-block;
 }
 
-a:hover, a:active {
-  background-color: red;
-}
 		li{
     margin: 10px 0;
 }
-		
-		
-		
-		
-		
-		body {
-			color: white;
-			background-color: #333;
-			font-family: 'Helvetica'
-		}
-	    </style>
-			
-    </head>
-    
-    <body>
-        <h1>Left on the Sideline: A Spatial Explanation of why Some Consumers Write Online Reviews and Others Don't.</h1>
-        <p>
-          <b>Abstract:</b> There may be several potential reasons for consumers to provide not only a quantitative star rating review, but written feedback as well. This project seeks to explain how geospatial differences between consumers in Brazil can affect the rate of written review creation. The focus lies mainly on:
-        </p>
-          		<ul>
+
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Helvetica, sans-serif;
+  background-color: #333;
+}
+
+/* Style the header */
+header {
+  background-color: #333;
+  padding: 30px;
+  text-align: center;
+  font-size: 35px;
+  color: white;
+}
+
+/* Create two columns/boxes that floats next to each other */
+nav {
+  float: left;
+  width: 30%;
+  height: 350px; /* only for demonstration, should be removed */
+  background: #333;
+  color: white;
+  padding: 20px;
+}
+
+/* Style the list inside the menu */
+nav ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+article {
+  float: left;
+  padding: 20px;
+  width: 70%;
+  color: white;
+  background-color: #333;
+  height: 350px; /* only for demonstration, should be removed */
+}
+
+/* Clear floats after the columns */
+section::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Style the footer */
+footer {
+  background-color: #333;
+  padding: 10px;
+  text-align: center;
+  color: white;
+}
+
+/* Responsive layout - makes the two columns/boxes stack on top of each other instead of next to each other, on small screens */
+@media (max-width: 600px) {
+  nav, article {
+    width: 100%;
+    height: auto;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h2>Left on the Sideline: A Spatial Explanation of why Some Consumers Write Online Reviews and Others Don't.</h2>
+</header>
+
+<section>
+  <nav>
+    <ol>
+	    <li><a href="SAO_PAULO_P1_rmdformat.html">Merging internal datsasets</a></li> 
+			<li><a href="SAO_PAULO_P2_rmdformat.html">Text cleaning</a></li> 
+      <li><a href="SAO_PAULO_P3_rmdformat.html">Derived variables</a></li>
+      <li><a href="SAO_PAULO_P4_rmdformat.html">External merge & first insights</a>
+    </ol>
+  </nav>
+  
+  <article>
+    <h1>Abstract</h1>
+    <p> There may be several potential reasons for consumers to provide not only a quantitative star rating review, but written feedback as well. This project seeks to explain how geospatial differences between consumers in Brazil can affect the rate of written review creation. The focus lies mainly on:</p>
+    <ul>
 			          <li>Culture;</li> 
 		          	<li>Urbanicity;</li> 
-        	      <li>Education, Health, & Per Capita Gross Income (Human Development Composite Index);</li> 
+        	      <li>Education, Health, & Per Capita Gross Income (Human Development Composite Index).</li> 
 		          </ul>
-		    <p>
-		    The research is done using publicly available data on customer reviews from Brazil's e-commerce marketplace platform provider Olist. I've provided a seperate Rmarkdown page for each distinct step in the project. It only includes the state of Sao Paulo and hence serves as a small-scale demonstration of what I plan on doing for all - or most - of Brazil. Furthermore, it includes only simple analysis techniques for now,  I plan on moving to Bayesian Networks at some later point. <a href="to_do_list.html">To-do list</a>
-        </p>
-		<h2> Steps in the project </h2>
-		<ol>
-			<li><a href="SAO_PAULO_P1_rmdformat.html">Merging internal datsasets</a></li> 
-			<li><a href="SAO_PAULO_P2_rmdformat.html">Text cleaning</a></li> 
-        	<li><a href="SAO_PAULO_P3_rmdformat.html">Derived variables</a></li>
-        	<li><a href="SAO_PAULO_P4_rmdformat.html">External merge & First insights</a> </li>
-		</ol>
-    </body>
+		  <p>
+		    The research is done using publicly available data on customer reviews from Brazil's e-commerce marketplace platform provider Olist. I've provided a seperate Rmarkdown page for each distinct step in the project. It only includes the state of Sao Paulo and hence serves as a small-scale demonstration of what I plan on doing for all - or most - of Brazil. Furthermore, it includes only simple analysis techniques for now,  I plan on moving to Bayesian Networks at some later point.
+    </p>
+		    
+		          
+		  
+  </article>
+</section>
+
+<footer>
+  <p><i>By Michiel van Eldik</i></p>
+ 
+</footer>
+
+</body>
 </html>
