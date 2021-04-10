@@ -26,7 +26,8 @@ library(kableExtra)
 
 ```{r }
 input <- read.csv("sp_2_cleaned_text.csv")
-geo_sao_paolo_df <- input
+input_2 <- read.csv("full_geomerged_df.csv")
+geo_sao_paolo_df <- input_2
 ```
 
 # __2. Dates data__
@@ -202,4 +203,5 @@ print("Work in Progress")
 
 ```{r }
 write.csv(geo_sao_paolo_df, "sp_3_derived_vars.csv")
+write.csv(geo_sao_paolo_df, "full_geomerged_df_3.csv")
 ```

@@ -28,15 +28,166 @@ library(rgdal)
 library(spatialEco)
 library(revgeo)
 library(car)
+library(readxl)
 library(koRpus)
+library(stringr)
+```
+
+HDI data
+```{r }
+my_data <- read_excel("data (3).xlsx")
+my_data$Territorialidades <- as.character(my_data$Territorialidades)
+my_data$Territorialidades <- iconv(my_data$Territorialidades, to = 'ASCII//TRANSLIT')
+my_data$Territorialidades <- tolower(my_data$Territorialidades)
+my_data <- my_data[-c(1,2),]
+``` 
+
+```{r }
+geo_sao_paolo_df <- geo_sao_paolo_df %>%
+    mutate(customer_city = paste(customer_city, "(", sep = " "),
+           customer_city = paste(customer_city, customer_state, sep = ""),
+           customer_city = paste(customer_city, ")", sep=""))
+
+geo_sao_paolo_df$customer_city <- tolower(geo_sao_paolo_df$customer_city)
+```
+
+```{r }
+
+merry <- merge(geo_sao_paolo_df,
+               my_data,
+               by.x = 'customer_city',
+               by.y = 'Territorialidades',
+               all.x = TRUE)
+
+```
+
+```{r }
+yoyo <- glm(message_bool ~ 
+                `IDHM 2010` + 
+                top2box + 
+                max_price +
+                y_2018 +
+                y_2017 + 
+                item_count +
+                review_sent_dow +
+                product_weight_g + 
+                product_category_name
+                , data = merry,  family='binomial')
+summary(yoyo)
+
+vif(yoyo)
+
+
+c_north <- c("AC","AP","AM","PA", "RO", "RR", "TO")
+c_south <- c("SC", "RS", "PR")
+c_southeast <- c("SP", "RJ", "MG", "ES")
+c_northeast <- c("AL", "BA", "CE", "MA", "RN", "SE", "PI", "PB", "PE")
+c_centerwest <- c("MT", "MS", "GO", "DF")
+```
+
+```{r }
+
+merry$north <- 0
+merry$south <- 0
+merry$southeast <- 0
+merry$northeast <- 0
+merry$centerwest <- 0
+
+
+merry <- merry %>% 
+    mutate(north = ifelse(customer_state %in% c_north, 1,0),
+           south = ifelse(customer_state %in% c_south, 1,0),
+           southeast = ifelse(customer_state %in% c_southeast, 1,0),
+           northeast = ifelse(customer_state %in% c_northeast, 1,0),
+           centerwest = ifelse(customer_state %in% c_centerwest, 1,0),
+           )
+```
+
+
+```{r }
+
+yoyo <- glm(message_bool ~ 
+                `IDHM 2010` + 
+                top2box + 
+                max_price +
+                y_2018 +
+                y_2017 + 
+                item_count +
+                review_sent_wknd +
+                #review_sent_dow +
+                product_weight_g + 
+                north +
+                south  + 
+                #southeast + 
+                northeast
+                , data = merry,  family='binomial')
+summary(yoyo)
+
+
+
+```
+```{r }
+vif(yoyo)
+```
+How well are low HDI reviews represented in the data?
+```{r }
+sud <- merry[merry$south == 1 ,]
+sud <- sud$`IDHM 2010`
+hist(sud)
+norte <- merry[merry$north ==1 ,]
+norte <- norte$`IDHM 2010`
+hist(norte)
+norteste <- merry[merry$northeast == 1,]
+norteste <- norteste$`IDHM 2010`
+hist(norteste)
+```
+
+
+```{r }
+zhu <- lm(message_length ~
+                `IDHM 2010` + 
+                top2box + 
+                max_price +
+                y_2018 +
+                y_2017 + 
+                item_count +
+                review_sent_wknd +
+                #review_sent_dow +
+                product_weight_g + 
+                north +
+                south  + 
+                #southeast + 
+                northeast
+                , data = merry[merry$message_length >0,])
+
+summary(zhu)
+```
+```{r }
+vif(zhu)
+```
+
+```{r }
+
+gsub("\\s*\\([^\\)]+\\)","",as.character(companies$Name))
+
+my_data <- my_data %>%
+    mutate(Territorialidades =  gsub("\\s*\\([^\\)]+\\)","", Territorialidades))
 ```
 
 ```{r }
 input <- read.csv("sp_3_derived_vars.csv")
+
+# full variant
+input_2 <- read.csv("full_geomerged_df_3.csv")
 ```
 
 ```{r }
 geo_sao_paolo_df <- input
+
+geo_sao_paolo_df <- input_2
+
+geo_sao_paulo_df <- geo_sao_paolo_df[geo_sao_paolo_df$customer_state == "AC",]
+
 ```
 
 
@@ -49,6 +200,7 @@ print(nrow(geo_sao_paolo_df[is.na(geo_sao_paolo_df$centroid_lat),]))
 geo_sao_paolo_df <- geo_sao_paolo_df[!is.na(geo_sao_paolo_df$centroid_lat),]
 
 ```
+
 Turn them into coordinate system (or something)
 ```{r }
 coordinates(geo_sao_paolo_df) = c('centroid_long', 'centroid_lat')
@@ -65,8 +217,56 @@ proj4string(geo_sao_paolo_df) = crs.geo1
 ```{r }
 # Load shapefile 
 # state map
-sp_map_2 <- readOGR('sao_paulo.shp')
+sp_map_2 <- readOGR("./shp_files/BR_Localidades_2010.shp")
+
+sp_map_1 <- readOGR('sao_paulo.shp')
+
+ac_map <- readOGR("./shp_files/ac_munic/12MUE250GC_SIR.shp")
+
+e <- over(ac_map, geo_sao_paolo_df) 
+
 ```
+
+```{r }
+plot(sp_map_2)
+points(geo_sao_paolo_df)
+```
+
+
+
+
+```{r }
+# Connect shapefile polygon data on municipality classification with our point data
+new_guy <- point.in.poly(geo_sao_paolo_df, ac_map, sp = FALSE)
+
+# transform it back to a normal dataframe in order to do further merging and analyses
+new_guy_df <- as.data.frame(new_guy)
+
+```
+
+
+
+
+```{r }
+nieuw<- as.data.frame(sp_map_2)
+```
+
+
+Return nearest neighbor index of other dataframe
+```{r }
+library(FNN)
+```
+
+```{r }
+nn1 = get.knnx(coordinates(sp_map_2), coordinates(geo_sao_paolo_df), 1)
+
+ii = nn1$nn.index[,1]
+ii
+
+new_guy_df <- as.data.frame(geo_sao_paolo_df)
+new_guy_2 <- as.data.frame(sp_map_2)
+```
+
 
 All data points distributed throughout the municipalities of Sao Paulo state.
 ```{r }

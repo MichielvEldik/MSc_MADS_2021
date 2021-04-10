@@ -338,7 +338,7 @@ roi_df <- merge(reviews_orders,
                               all.x = TRUE)
 ```
 
-Case and point:\
+Case and point:
 
 An order with 21 items implies that a single review will be represented 21 times in the dataset.
 ```{r }
@@ -531,6 +531,19 @@ bicep_df_dups <- bicep_df %>%
 
 Luckily, not all joins were a headache. This one was pretty straightforward! 
 ```{r }
+# merge the translation of product categories  with products_df
+translated_products_df <- merge(products_df, 
+                     translate_df, 
+                     by.x = 'product_category_name', 
+                     by.y = 'product_category_name', 
+                     all.x = TRUE)
+
+# replace Portuguese category names with English translations of them
+translated_products_df$product_category_name <- translated_products_df$product_category_name_english
+# drop redundant column
+translated_products_df <- translated_products_df[,1:9]
+
+
 bicep_df <- merge(bicep_df, 
                  translated_products_df, # We created this dataset in one of the previous merge operations
                  by.x = 'product_id.y', 
@@ -555,12 +568,84 @@ __NOTICE:__ For a single state, the merge will be relatively easy because the co
 Select Sao Paulo state from our own dataset.
 ```{r }
 sao_paulo_state <- bicep_df[bicep_df$customer_state == 'SP',]
-```
-
-Make sure we only look at Sao Paulo state data in the geo_df
-```{r }
 sao_paulo_geo_df <- geo_df[geo_df$geolocation_state == 'SP',]
 ```
+
+
+```{r }
+centroid_and_merge_function <- function(x_STATE_rev_df, 
+                                        x_STATE_geo_df){
+  # centroid part
+  centroids_x_STATE_geo_df <- x_STATE_geo_df %>%
+    group_by(geolocation_zip_code_prefix) %>%
+    summarise(
+      centroid_lat = mean(geolocation_lat),
+      centroid_long = mean(geolocation_lng)
+    ) %>%
+    ungroup()
+  # merge part
+  geo_rev_STATE_df <- merge(x_STATE_rev_df,
+                          centroids_x_STATE_geo_df,
+                          by.x = 'customer_zip_code_prefix',
+                          by.y = 'geolocation_zip_code_prefix',
+                          all.x = TRUE)
+  
+  
+  return(geo_rev_STATE_df)
+}
+```
+
+
+```{r }
+centroid_and_merge_function <- function(name_of_state){
+  
+  # define stuff
+  x_STATE_rev_df <- bicep_df[bicep_df$customer_state == name_of_state,]
+  x_STATE_geo_df <- geo_df[geo_df$geolocation_state == name_of_state,]
+  
+  # centroid part
+  centroids_x_STATE_geo_df <- x_STATE_geo_df %>%
+    group_by(geolocation_zip_code_prefix) %>%
+    summarise(
+      centroid_lat = mean(geolocation_lat),
+      centroid_long = mean(geolocation_lng)
+    ) %>%
+    ungroup()
+  # merge part
+  geo_rev_STATE_df <- merge(x_STATE_rev_df,
+                          centroids_x_STATE_geo_df,
+                          by.x = 'customer_zip_code_prefix',
+                          by.y = 'geolocation_zip_code_prefix',
+                          all.x = TRUE)
+  
+  
+  return(geo_rev_STATE_df)
+}
+```
+
+```{r }
+state_names <- c(levels(bicep_df$customer_state))
+```
+
+```{r }
+empty_list <- vector(mode = "list", length = length(state_names))
+```
+
+```{r }
+for (i in 1:length(state_names)){
+  empty_list[[i]] <- centroid_and_merge_function(state_names[i])
+}
+```
+
+
+```{r }
+base_df <- empty_list[[1]]
+
+for (i in 2:27){
+  base_df <- rbind(base_df, empty_list[[i]])
+}
+```
+
 
 There are multiple coordinates per `customer_zip_code_prefix`. In order to merge, we need to have 1 set of coordinates associated with 1 `customer_zip_code_prefix`. We can resolve this by calculating the centroids of coordinates for each `customer_zip_code_prefix` in the geo dataset by taking the `mean()` of the longs and lats whilst utilizing the `group_by` and `summarise` functions. 
 ```{r }
@@ -590,3 +675,7 @@ Write as csv to use in another Rmarkdown file.
 ```{r eval=FALSE}
 write.csv(geo_sao_paolo_state_df,"sao_paulo_state_dataset.csv", row.names = FALSE)
 ``` 
+
+```{r eval=FALSE}
+write.csv(base_df, "full_geomerged_df.csv", row.names = FALSE)
+```
