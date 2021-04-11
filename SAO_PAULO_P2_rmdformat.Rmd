@@ -596,7 +596,8 @@ empty_df <- read.csv("stopword_filtered_sp_reviews.csv")
 empty_df <- empty_df %>%
   select(-X)
 ```
-Replace unfiltered column with filtered comments
+Replace unfiltered column with filtered comments.\n
+(already done before)
 ``` {r }
 geo_sao_paolo_df$review_comment_message <- empty_df$new_stuff
 ```
