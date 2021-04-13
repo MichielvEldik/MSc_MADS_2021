@@ -16,10 +16,10 @@ library(qdap)
 
 input <- read.csv("full_geomerged_df.csv")
 
-geo_sao_paolo_df <- input
-sanity_geo_sao_paulo <- input
+brazil_df <- input
+sanity_brazil <- input
 
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
+brazil_df <- brazil_df %>%
   mutate(
     review_comment_message = as.character(review_comment_message),
     review_comment_title = as.character(review_comment_title)
@@ -30,7 +30,7 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
 # --------------------------------- #
 
 # For message
-geo_sao_paolo_df  <- geo_sao_paolo_df %>%
+brazil_df  <- brazil_df %>%
   mutate(
     # Remove punctuation 
     review_comment_message = gsub("[[:punct:]]+"," ", review_comment_message),
@@ -45,7 +45,7 @@ geo_sao_paolo_df  <- geo_sao_paolo_df %>%
   )
 
 # for title
-geo_sao_paolo_df  <- geo_sao_paolo_df %>%
+brazil_df  <- brazil_df %>%
   mutate(
     # Remove punctuation 
     review_comment_title = gsub("[[:punct:]]+"," ", review_comment_title),
@@ -60,7 +60,7 @@ geo_sao_paolo_df  <- geo_sao_paolo_df %>%
   )
 
 # Remove extremely short comments except for "ok"
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
+brazil_df <- brazil_df %>%
   mutate(
     review_comment_message = ifelse(
       nchar(review_comment_message) < 3 & review_comment_message != "ok",
@@ -69,26 +69,27 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
   )
 
 # Convert to lower
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
+brazil_df <- brazil_df %>%
   mutate(
     review_comment_message = tolower(review_comment_message),
     review_comment_title = tolower(review_comment_title)
   )
 
 # Record comment length before transformations
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
+brazil_df <- brazil_df %>%
   mutate(
     # total characters in the string
-    bef_nchar = nchar(geo_sao_paolo_df$review_comment_message),
+    bef_nchar = nchar(brazil_df$review_comment_message),
     # total number of separations (words) in the string 
-    bef_nwords = lengths(strsplit(geo_sao_paolo_df$review_comment_message, " ")),
+    bef_nwords = lengths(strsplit(brazil_df$review_comment_message, " ")),
     # average number of letters per word 
-    nchar_perword = nchar(geo_sao_paolo_df$review_comment_message) / lengths(strsplit(geo_sao_paolo_df$review_comment_message, " "))
+    nchar_perword = nchar(brazil_df$review_comment_message) / lengths(strsplit(brazil_df$review_comment_message, " "))
   )
 
 # write for "Spacen met Spacy.ipynb"
-to_write <- geo_sao_paolo_df %>%
+to_write <- brazil_df %>%
   select(review_id, review_comment_message)
+
 write.csv(to_write, "for_spacy.csv", row.names = FALSE)
 
 # ------------------- #
@@ -99,17 +100,17 @@ write.csv(to_write, "for_spacy.csv", row.names = FALSE)
 lemmatized <- read.csv('lemmatized.csv')
 
 # Create index column that will help with merge
-indiced_gsp <- geo_sao_paolo_df
+indiced_gsp <- brazil_df
 indiced_gsp$index <- c(0: (nrow(indiced_gsp) - 1))
 
 # Merge by index
-geo_sao_paolo_df <- merge(indiced_gsp, lemmatized, 
+brazil_df <- merge(indiced_gsp, lemmatized, 
                           by.x = 'index',
                           by.y = 'index',
                           all.x = TRUE)
 
 # Get rid of unnecessary columns
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
+brazil_df <- brazil_df %>%
   mutate(review_comment_message = sentence) %>%
   select(
     - X,
@@ -118,14 +119,14 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
   )
 
 # Turn into string again
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
+brazil_df <- brazil_df %>%
   mutate(
     review_comment_message = as.character(review_comment_message),
     review_comment_title = as.character(review_comment_title)
   )
 
 # standardize comments to ASCII encoding representation
-geo_sao_paolo_df <- geo_sao_paolo_df %>%
+brazil_df <- brazil_df %>%
   mutate(
     # Convert message
     review_comment_message = iconv(
@@ -138,8 +139,8 @@ geo_sao_paolo_df <- geo_sao_paolo_df %>%
   )
 
 # tidy text format shows word frequencies
-text_df <- tibble(line = 1:nrow(geo_sao_paolo_df), 
-                  text = as.character(geo_sao_paolo_df$review_comment_message))
+text_df <- tibble(line = 1:nrow(brazil_df), 
+                  text = as.character(brazil_df$review_comment_message))
 
 new_text_df <- text_df %>%
   unnest_tokens(word, text) %>%
@@ -214,18 +215,18 @@ dic <- unique(dic)
 # individual word-level cleaning: filter with dic #
 # ----------------------------------------------- #
 
-empty_df <- as.data.frame(geo_sao_paolo_df$review_id)
+empty_df <- as.data.frame(brazil_df$review_id)
 empty_df$iterator <- c(1:nrow(empty_df))
 empty_df$new_stuff <- 0 
 
 iterator <- 1
 
-for (i in geo_sao_paolo_df$review_comment_message) {
+for (i in brazil_df$review_comment_message) {
   print(paste(rm_stopwords(i, dic)[[1]], collapse = " "))
   empty_df$new_stuff[iterator] <- paste(rm_stopwords(i, dic)[[1]], collapse = " ")
   iterator = iterator + 1
 }
-geo_sao_paolo_df$review_comment_message <- empty_df$new_stuff
+brazil_df$review_comment_message <- empty_df$new_stuff
 
 
-write.csv(geo_sao_paolo_df,"full_geomerged_df_2.csv", row.names = FALSE)
+write.csv(brazil_df,"full_geomerged_df_2.csv", row.names = FALSE)
