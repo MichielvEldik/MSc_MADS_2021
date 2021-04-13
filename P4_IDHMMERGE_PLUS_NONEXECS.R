@@ -46,7 +46,7 @@ merry <- merge(brazil_df,
 
 nrow(merry[is.na(merry$`IDHM 2010`),])
 
-
+hey <- glm(message_bool ~ `IDHM 2010`, data = merry, family = 'binomial')
 
 yoyo <- glm(message_bool ~ 
               `IDHM 2010` + 

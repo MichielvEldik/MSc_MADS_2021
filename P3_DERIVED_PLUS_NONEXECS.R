@@ -78,6 +78,9 @@ brazil_df <- brazil_df %>%
   mutate(message_bool = ifelse(message_length == 0, 0, 1)) %>%
   mutate(message_bool = as.integer(message_bool))
 
+brazil_df <- brazil_df %>%
+  mutate(message_bool = ifelse(is.na(message_bool) == TRUE, 0, message_bool))
+
 # Create a dummy variable for title message
 brazil_df <- brazil_df %>%
   mutate(review_comment_title = as.character(review_comment_title)) %>%
@@ -102,8 +105,7 @@ brazil_df <- brazil_df %>%
 # Work in progress! 
 table(brazil_df$product_category_name)
 
-brazil_df %>%
-  group_by(produc)
+
 
 
 
@@ -124,7 +126,6 @@ experience_goods <- c("auto",
 credence_goods <- c("health_beauty",
                     "")
 
-durable_experience_goods
 
 product_cats <- brazil_df %>%
   group_by(product_category_name) %>%
