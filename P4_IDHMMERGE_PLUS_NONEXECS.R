@@ -7,15 +7,116 @@
 
 
 library(readxl)
+library(tidyr)
+library(dplyr)
+library(corrplot)
 
 input <- read.csv("full_geomerged_df_3.csv")
 brazil_df <- input
 
 
+
+
+# old
 my_data <- read_excel("data (3).xlsx")
+
+
 my_data$Territorialidades <- as.character(my_data$Territorialidades)
 my_data$Territorialidades <- iconv(my_data$Territorialidades, to = 'ASCII//TRANSLIT')
 my_data$Territorialidades <- tolower(my_data$Territorialidades)
+
+
+
+# New
+new_data <- read_excel("full_atlas_data.xlsx")
+
+# All nas
+colSums(is.na(new_data))
+
+new_data <- new_data %>%
+  mutate(Territorialidades = as.character(Territorialidades),
+         Territorialidades = iconv(Territorialidades, to = 'ASCII//TRANSLIT'),
+         Territorialidades = tolower(Territorialidades)
+        ) %>%
+  filter(! grepl("elabor", Territorialidades)
+        ) %>%
+  filter(! grepl("brasil", Territorialidades)
+        ) %>%
+  filter(! grepl("fontes:", Territorialidades)
+        ) %>%
+  drop_na(Territorialidades
+        ) %>%
+  mutate(
+    urbanity = `População urbana 2010` / `População total 2010`,
+    rurality = `População rural 2010` / `População total 2010`,
+    rurality = ifelse(is.na(`População rural 2010`) == TRUE, 0, rurality)
+        ) %>% 
+  mutate(cumul_age_24 = 
+      `População masculina de 0 a 4 anos de idade 2010` +
+      `População masculina de 5 a 9 anos de idade 2010` +
+      `População masculina de 10 a 14 anos de idade 2010` + 
+      `População masculina de 15 a 19 anos de idade 2010` + 
+      `População masculina de 20 a 24 anos de idade 2010`
+        ) %>%
+  select(
+      - `População masculina de 0 a 4 anos de idade 2010`,
+      - `População masculina de 5 a 9 anos de idade 2010`,
+      - `População masculina de 10 a 14 anos de idade 2010`,
+      - `População masculina de 15 a 19 anos de idade 2010`,
+      - `População masculina de 20 a 24 anos de idade 2010`,
+      - `População masculina de 25 a 29 anos de idade 2010`,
+      - `População masculina de 30 a 34 anos de idade 2010`
+        ) %>%
+  mutate(young_ratio = cumul_age_24 / `População total 2010`)
+
+
+
+# corrplot
+
+corretje <- cor(new_data[,c("IDHM 2010",
+                            "urbanity",
+                            "young_ratio")])
+
+corrplot(corretje, method = "circle")
+
+# 
+# some neighborhood-level geocoding #
+# 
+
+# geocoding
+
+
+library(tmaptools)
+
+
+gui <- geocode_OSM("Jardim Eliane Sao Paulo")
+
+
+
+
+
+
+
+
+
+
+# --------------------------- # 
+#  Big cities in Brazil       #   
+# --------------------------- #
+
+big_cities <- c("sao paulo",
+               "rio de janeiro",
+               "belo horizonte",
+               "distrito federal",
+               "porto alegre",
+               "fortaleza",
+               "recife",
+               "salvador",
+               "curitiba",
+               "campinas",
+               "et cetera")
+
+
 
 
 # ------------------------------------------ #

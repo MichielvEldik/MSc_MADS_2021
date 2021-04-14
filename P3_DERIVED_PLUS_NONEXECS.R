@@ -35,7 +35,6 @@ brazil_df <- brazil_df %>%
                                       format = "%Y-%m-%d %H:%M:%S")
         )
 
-
 brazil_df <- brazil_df %>%
   mutate(
     diff_est_deliv = order_estimated_delivery_date - order_delivered_customer_date,
