@@ -99,7 +99,7 @@ hi <- gui[["coords"]][["x"]]
 hoi <- gui[["coords"]][["y"]]
 
 
-
+# -----------------------------------------------
 
 lowest_sp <- read_excel("lowest_saopaulo.xlsx")
 
@@ -108,7 +108,6 @@ lowest_sp <- lowest_sp %>%
 
 
 subbie <- lowest_sp$Territorialidades[1:100]
-whatevs <- rep(0, 10)
 subbie_df <- as.data.frame(subbie)
 
 
@@ -124,21 +123,42 @@ subbie_df <- subbie_df %>%
 
 subbie_df <- unique(subbie_df$subbie)
 subbie_df <- as.data.frame(subbie_df)
-subbie_df$x <- rep(0, nrow(subbie_df))
-subbie_df$y <- rep(0, nrow(subbie_df))
+subbie_df <- subbie_df %>%
+  mutate(
+    x <- 0,
+    y <- 0
+  )
 
-
-counter <- 1
-for (i in subbie_df$subbie_df) {
-  gui <- geocode_OSM(i)
-  subbie_df$x[counter] <- gui[["coords"]][["x"]]
-  subbie_df$y[counter] <- gui[["coords"]][["y"]]
-  print(i)
-  counter <- counter + 1 
+get_cors <- function(datasetje){
+  counter <- 1 
+  subbie_df <- datasetje
+  for (i in subbie_df$subbie_df){
+    tryCatch({
+      retrieved_cors <- geocode_OSM(i)
+      subbie_df$x[counter] <- retrieved_cors[["coords"]][["x"]]
+      subbie_df$y[counter] <- retrieved_cors[["coords"]][["y"]]
+    },
+    error = function(e){
+      subbie_df$x[counter] <- 0
+      subbie_df$y[counter] <- 0
+    })
+    print(i)
+    counter <- counter + 1
+  }
+  return(subbie_df)
 }
+
+sallgoodman <- get_cors(subbie_df)
 
 
 # -------------------------
+
+
+
+
+# -------- Next up ----------#
+## ---- Nearest neighbor -- ##
+## ---- Deal with weird coordinates -- ## 
 
 
 hiii <- sapply(subbie_df ,function(x) gsub("\\.",",", as.character(x)))
