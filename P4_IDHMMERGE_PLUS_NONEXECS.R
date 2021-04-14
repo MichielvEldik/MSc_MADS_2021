@@ -89,15 +89,76 @@ corrplot(corretje, method = "circle")
 library(tmaptools)
 
 
-gui <- geocode_OSM("Jardim Eliane Sao Paulo")
+gui <- geocode_OSM("Açafrão (sao paulo)")
 
 
 
 
 
+hi <- gui[["coords"]][["x"]]
+hoi <- gui[["coords"]][["y"]]
 
 
 
+
+lowest_sp <- read_excel("lowest_saopaulo.xlsx")
+
+lowest_sp <- lowest_sp %>% 
+  filter(! grepl("Brasil", Territorialidades))
+
+
+subbie <- lowest_sp$Territorialidades[1:100]
+whatevs <- rep(0, 10)
+subbie_df <- as.data.frame(subbie)
+
+
+subbie_df <- subbie_df %>%
+  mutate(
+    subbie = gsub(":.*", "", subbie),
+    subbie = ifelse(grepl("/", subbie), gsub("/.*", "", subbie), subbie),
+    subbie = gsub("\\s*\\([^\\)]+\\)","", subbie),
+    subbie = paste(subbie, "(Sao Paulo)", sep = " "),
+    subbie = gsub("\\s+", " ", subbie) # whitespaces
+        )
+
+
+subbie_df <- unique(subbie_df$subbie)
+subbie_df <- as.data.frame(subbie_df)
+subbie_df$x <- rep(0, nrow(subbie_df))
+subbie_df$y <- rep(0, nrow(subbie_df))
+
+
+counter <- 1
+for (i in subbie_df$subbie_df) {
+  gui <- geocode_OSM(i)
+  subbie_df$x[counter] <- gui[["coords"]][["x"]]
+  subbie_df$y[counter] <- gui[["coords"]][["y"]]
+  print(i)
+  counter <- counter + 1 
+}
+
+
+# -------------------------
+
+
+hiii <- sapply(subbie_df ,function(x) gsub("\\.",",", as.character(x)))
+
+gsub("[^:]*$", "", subbie_df$subbie)
+
+subbie_df$subbie <- gsub(":.*", "", subbie_df$subbie)
+
+
+x <- rep(0, 10)
+y <- rep(0, 10)
+
+counter <- 1
+for (i in lowest_sp$Territorialidades[1:10]) {
+  gui <- geocode_OSM(i)
+  x[counter] <- gui[["coords"]][["x"]]
+  y[counter] <- gui[["coords"]][["y"]]
+  print(i)
+  counter <- counter + 1 
+}
 
 
 # --------------------------- # 
