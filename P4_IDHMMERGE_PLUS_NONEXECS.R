@@ -26,7 +26,20 @@ brazil_municip <- read_excel("./atlas_data/brazil_municipal.xlsx")
 
 # external data | udh (neighborhood) level
 sp_udh <- read_excel("./atlas_data/sao_paulo_udh.xlsx")
-
+fortaleza_udh <- read_excel("./atlas_data/fortaleza_udh.xlsx")
+recife_udh <- read_excel("./atlas_data/recife_udh.xlsx")
+rio_dj_udh <- read_excel("./atlas_data/rio_dj_udh.xlsx")
+salvador_udh <- read_excel("./atlas_data/salvador_udh.xlsx")
+porto_alegre_udh <- read_excel("./atlas_data/porto_alegre_udh.xlsx")
+natal_udh <- read_excel("./atlas_data/natal_udh.xlsx")
+maceio_udh <- read_excel("./atlas_data/maceio_udh.xlsx")
+belo_horizonte_udh <- read_excel("./atlas_data/belo_horizonte_udh.xlsx")
+campinas_udh <- read_excel("./atlas_data/campinas_udh.xlsx")
+curitiba_udh <- read_excel("./atlas_data/curitiba_udh.xlsx")
+belem_udh <- read_excel("./atlas_data/belem_udh.xlsx")
+goiania_udh <- read_excel("./atlas_data/goiania_udh.xlsx")
+grande_vitoria_udh <- read_excel("./atlas_data/grande vitoria_udh.xlsx")
+florianopolis_udh <- read_excel("./atlas_data/florianopolis_udh.xlsx")
 
 # ------------------------------- #
 # Cleaning and deriving variables # -------------------------------------------
@@ -103,6 +116,22 @@ column_fixer <- function(new_data, data_level){
 
 # Salling function for various level datasets
 sp_udh <- column_fixer(sp_udh, 'udh')
+fortaleza_udh <- column_fixer(fortaleza_udh, "udh")
+recife_udh <- column_fixer(recife_udh, "udh")
+rio_dj_udh <- column_fixer(rio_dj_udh, "udh")
+salvador_udh <- column_fixer(salvador_udh, "udh")
+porto_alegre_udh <- column_fixer(porto_alegre_udh, "udh")
+natal_udh <- column_fixer(natal_udh, "udh")
+maceio_udh <- column_fixer(maceio_udh, "udh")
+belo_horizonte_udh <- column_fixer(belo_horizonte_udh, "udh")
+campinas_udh <- column_fixer(campinas_udh, "udh")
+curitiba_udh <- column_fixer(curitiba_udh, "udh")
+belem_udh <- column_fixer(belem_udh, "udh")
+goiania_udh <- column_fixer(goiania_udh, "udh")
+grande_vitoria_udh <- column_fixer(grande_vitoria_udh, "udh")
+florianopolis_udh <- column_fixer(florianopolis_udh, "udh")
+
+# Full 
 brazil_municip <- column_fixer(brazil_municip, 'municip')
 
 
@@ -110,6 +139,7 @@ brazil_municip <- column_fixer(brazil_municip, 'municip')
 # udh query # ----------------------------------------------------------------
 # --------- #
 
+# function that uses names to query coordinates and returns them to main func.
 get_cors <- function(datasetje){
   counter <- 1 
   subbie_df <- datasetje
@@ -132,14 +162,18 @@ get_cors <- function(datasetje){
   return(subbie_df)
 }
 
-coordinate_retriever <- function(input_udh_data) {
+# main function, cleans before query and calls query function
+coordinate_retriever <- function(input_udh_data, city_name) {
   # Clean text to avoid trouble in OSM queries
   input_udh_data <- input_udh_data %>%
     mutate(
       udh.Territorialidades = gsub(":.*", "", udh.Territorialidades),
-      udh.Territorialidades = ifelse(grepl("/", udh.Territorialidades), gsub("/.*", "", udh.Territorialidades), udh.Territorialidades),
+      udh.Territorialidades = ifelse(
+        grepl("/", udh.Territorialidades), 
+        gsub("/.*", "", udh.Territorialidades), 
+        udh.Territorialidades),
       udh.Territorialidades = gsub("\\s*\\([^\\)]+\\)","", udh.Territorialidades),
-      udh.Territorialidades = paste(udh.Territorialidades, "(Sao Paulo)", sep = " "),
+      udh.Territorialidades = paste(udh.Territorialidades, city_name, sep = " "),
       udh.Territorialidades = gsub("\\s+", " ", udh.Territorialidades) # whitespaces
     )
   # drop non uniques 
@@ -154,14 +188,45 @@ coordinate_retriever <- function(input_udh_data) {
 }
 
 # call function with datasets
-sp_udh <- coordinate_retriever(sp_udh)
-write.csv(sp_udh, "./udh_queried_data/sao_paulo_queried.csv")
+sp_udh <- coordinate_retriever(sp_udh, 'sao_paulo')
+fortaleza_udh <- coordinate_retriever(fortaleza_udh, 'fortaleza')
+recife_udh <- coordinate_retriever(recife_udh, 'recife')
+rio_dj_udh <- coordinate_retriever(rio_dj_udh, 'rio de janeiro')
+salvador_udh <- coordinate_retriever(salvador_udh, "salvador")
+porto_alegre_udh <- coordinate_retriever(porto_alegre_udh, "porto alegre")
+natal_udh <- coordinate_retriever(natal_udh, "natal")
+maceio_udh <- coordinate_retriever(maceio_udh, "maceio")
+belo_horizonte_udh <- coordinate_retriever(belo_horizonte_udh, "belo horizonte")
+campinas_udh <- coordinate_retriever(campinas_udh, "campinas")
+curitiba_udh <- coordinate_retriever(curitiba_udh, "curitiba")
+belem_udh <- coordinate_retriever(belem_udh, "belem")
+goiania_udh <- coordinate_retriever(goiania_udh, "goiania")
+grande_vitoria_udh <- coordinate_retriever(grande_vitoria_udh, "vitoria")
+florianopolis_udh <- coordinate_retriever(florianopolis_udh, "florianopolis")
+
+
+# write as csv to avoid doing things over and over again
+write.csv(sp_udh, "./udh_queried_data/sao_paulo_udh_queried.csv")
+write.csv(fortaleza_udh, "./udh_queried_data/fortaleza_udh_queried.csv")
+write.csv(recife_udh, "./udh_queried_data/recife_udh_queried.csv")
+write.csv(rio_dj_udh, "./udh_queried_data/rio_dj_udh_queried.csv")
+write.csv(salvador_udh, "./udh_queried_data/salvador_udh_queried.csv")
+write.csv(porto_alegre_udh, "./udh_queried_data/porto_alegre_udh_queried.csv")
+write.csv(natal_udh, "./udh_queried_data/natal_udh_queried.csv")
+write.csv(maceio_udh, "./udh_queried_data/maceio_udh_queried.csv")
+write.csv(belo_horizonte_udh, "./udh_queried_data/belo_horizonte_udh_queried.csv")
+write.csv(curitiba_udh, "./udh_queried_data/curtiba_udh_queried.csv")
+write.csv(belem_udh, "./udh_queried_data/belem_udh_queried.csv")
+write.csv(goiania_udh, "./udh_queried_data/goiania_udh_queried.csv")
+write.csv(grande_vitoria_udh, "./udh_queried_data/grande_vitoria_udh_queried.csv")
+write.csv(florianopolis_udh, "./udh_queried_data/florianopolis_udh_queried.csv")
 
 
 # ---------------------------- #
-# udh merge with internal data # ----------------------------------------------------------------
+# udh merge with internal data # ----------------------------------------------
 # ---------------------------- #
 
+# function that combines udh-level dataset with data from internal
 udh_merge_ex_with_in <- function(internal_data, external_data, city) {
   
   external_data <- external_data[
@@ -191,7 +256,19 @@ udh_merge_ex_with_in <- function(internal_data, external_data, city) {
 }
 
 sao_paulo_udh_merged <- udh_merge_ex_with_in(brazil_df, sp_udh, 'sao paulo')
-
+fortaleza_udh_merged <- udh_merge_ex_with_in(brazil_df, fortaleza_udh, 'fortaleza')
+recife_udh_merged <- udh_merge_ex_with_in(brazil_df, recife_udh, 'recife')
+rio_dj_udh_merged <- udh_merge_ex_with_in(brazil_df, rio_dj_udh, 'rio de janeiro')
+salvador_udh_merged <- udh_merge_ex_with_in(brazil_df, salvador_udh, 'salvador')
+porto_alegre_udh_merged <- udh_merge_ex_with_in(brazil_df, porto_alegre_udh, 'porto alegre')
+natal_udh_merged <- udh_merge_ex_with_in(brazil_df, natal_udh, 'natal')
+maceio_udh_merged <- udh_merge_ex_with_in(brazil_df, maceio_udh, 'maceio')
+belo_horizonte_udh_merged <- udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, 'belo horizonte')
+curitiba_udh_merged <- udh_merge_ex_with_in(brazil_df, curitiba_udh, 'curitiba')
+belem_udh_merged <- udh_merge_ex_with_in(brazil_df, belem_udh, 'belem')
+goiania_udh_merged <- udh_merge_ex_with_in(brazil_df, goiania_udh, 'goiania')
+grande_vitoria_udh_merged <- udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, 'vitoria')
+florianopolis_udh_merged <- udh_merge_ex_with_in(brazil_df, florianopolis_udh, 'florianopolis')
 
 
 # ---------------------------------- #
