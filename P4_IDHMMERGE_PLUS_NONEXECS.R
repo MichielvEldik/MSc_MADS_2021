@@ -21,10 +21,7 @@ library(FNN)
 input <- read.csv("full_geomerged_df_3.csv")
 brazil_df <- input
 
-# external data | municip level
-brazil_municip <- read_excel("./atlas_data/brazil_municipal.xlsx")
-
-# external data | udh (neighborhood) level
+# external data | udh (neighborhood) level, by metrpopolitan region
 sp_udh <- read_excel("./atlas_data/sao_paulo_udh.xlsx")
 fortaleza_udh <- read_excel("./atlas_data/fortaleza_udh.xlsx")
 recife_udh <- read_excel("./atlas_data/recife_udh.xlsx")
@@ -73,45 +70,53 @@ locality_names <- function(input_data, data_level) {
 # General purpose (works for all data levels)
 # Purpose: cleans atlas Brasil external data
 column_fixer <- function(new_data, data_level){
-  new_data <- new_data %>%
-    mutate(Territorialidades = as.character(Territorialidades),
-           Territorialidades = iconv(Territorialidades, to = 'ASCII//TRANSLIT'),
-           Territorialidades = tolower(Territorialidades)
-    ) %>%
-    filter(! grepl("elabor", Territorialidades)
-    ) %>%
-    filter(! grepl("brasil", Territorialidades)
-    ) %>%
-    filter(! grepl("fontes:", Territorialidades)
-    ) %>%
-    drop_na(Territorialidades
-    ) %>%
-    mutate(
-      urbanity = `População urbana 2010` / `População total 2010`,
-      rurality = `População rural 2010` / `População total 2010`,
-      rurality = ifelse(is.na(`População rural 2010`) == TRUE, 0, rurality)
-    ) %>% 
-    mutate(cumul_age_24 = 
-             `População masculina de 0 a 4 anos de idade 2010` +
-             `População masculina de 5 a 9 anos de idade 2010` +
-             `População masculina de 10 a 14 anos de idade 2010` + 
-             `População masculina de 15 a 19 anos de idade 2010` + 
-             `População masculina de 20 a 24 anos de idade 2010`
-    ) %>%
-    select(
-      - `População masculina de 0 a 4 anos de idade 2010`,
-      - `População masculina de 5 a 9 anos de idade 2010`,
-      - `População masculina de 10 a 14 anos de idade 2010`,
-      - `População masculina de 15 a 19 anos de idade 2010`,
-      - `População masculina de 20 a 24 anos de idade 2010`,
-      - `População masculina de 25 a 29 anos de idade 2010`,
-      - `População masculina de 30 a 34 anos de idade 2010`
-    ) %>%
-    mutate(young_ratio = cumul_age_24 / `População total 2010`)
-  
-  new_data <- locality_names(new_data, data_level)
-  
-  return(new_data)
+  if (grepl('Brasil', head(new_data[, 'Territorialidades'], n = 1)) &
+      grepl('Fontes:', tail(new_data[, 'Territorialidades'], n = 1))) {
+    print("ready for action.")
+    
+    new_data <- new_data %>%
+      mutate(Territorialidades = as.character(Territorialidades),
+             Territorialidades = iconv(Territorialidades, to = 'ASCII//TRANSLIT'),
+             Territorialidades = tolower(Territorialidades)
+      ) %>%
+      filter(row_number() <= n()-3
+      ) %>%
+      filter(!row_number() == 1
+      ) %>%
+      drop_na(Territorialidades
+      ) %>%
+      mutate(
+        urbanity = `População urbana 2010` / `População total 2010`,
+        rurality = `População rural 2010` / `População total 2010`,
+        rurality = ifelse(is.na(`População rural 2010`) == TRUE, 0, rurality)
+      ) %>% 
+      mutate(cumul_age_24 = 
+               `População masculina de 0 a 4 anos de idade 2010` +
+               `População masculina de 5 a 9 anos de idade 2010` +
+               `População masculina de 10 a 14 anos de idade 2010` + 
+               `População masculina de 15 a 19 anos de idade 2010` + 
+               `População masculina de 20 a 24 anos de idade 2010`
+      ) %>%
+      select(
+        - `População masculina de 0 a 4 anos de idade 2010`,
+        - `População masculina de 5 a 9 anos de idade 2010`,
+        - `População masculina de 10 a 14 anos de idade 2010`,
+        - `População masculina de 15 a 19 anos de idade 2010`,
+        - `População masculina de 20 a 24 anos de idade 2010`,
+        - `População masculina de 25 a 29 anos de idade 2010`,
+        - `População masculina de 30 a 34 anos de idade 2010`
+      ) %>%
+      mutate(young_ratio = cumul_age_24 / `População total 2010`)
+    
+    new_data <- locality_names(new_data, data_level)
+    
+    return(new_data)
+    
+  } else {
+    print("Not ready for action")
+    return("Something is wrong")
+     
+  }
 }
 
 # Salling function for various level datasets
@@ -130,10 +135,6 @@ belem_udh <- column_fixer(belem_udh, "udh")
 goiania_udh <- column_fixer(goiania_udh, "udh")
 grande_vitoria_udh <- column_fixer(grande_vitoria_udh, "udh")
 florianopolis_udh <- column_fixer(florianopolis_udh, "udh")
-
-# Full 
-brazil_municip <- column_fixer(brazil_municip, 'municip')
-
 
 # --------- #
 # udh query # ----------------------------------------------------------------
@@ -222,6 +223,9 @@ write.csv(grande_vitoria_udh, "./udh_queried_data/grande_vitoria_udh_queried.csv
 write.csv(florianopolis_udh, "./udh_queried_data/florianopolis_udh_queried.csv")
 
 
+
+
+
 # ---------------------------- #
 # udh merge with internal data # ----------------------------------------------
 # ---------------------------- #
@@ -271,6 +275,90 @@ grande_vitoria_udh_merged <- udh_merge_ex_with_in(brazil_df, grande_vitoria_udh,
 florianopolis_udh_merged <- udh_merge_ex_with_in(brazil_df, florianopolis_udh, 'florianopolis')
 
 
+
+
+
+
+
+
+
+# ------------------------- # Whole process sped up # -------------------------
+
+sp_udh <- read.csv("./udh_queried_data/sao_paulo_udh_queried.csv")
+fortaleza_udh <- read.csv("./udh_queried_data/fortaleza_udh_queried.csv")
+recife_udh <- read.csv("./udh_queried_data/recife_udh_queried.csv")
+rio_dj_udh <- read.csv("./udh_queried_data/rio_dj_udh_queried.csv")
+salvador_udh <- read.csv("./udh_queried_data/salvador_udh_queried.csv")
+porto_alegre_udh <- read.csv("./udh_queried_data/porto_alegre_udh_queried.csv")
+natal_udh <- read.csv("./udh_queried_data/natal_udh_queried.csv")
+maceio_udh <- read.csv("./udh_queried_data/maceio_udh_queried.csv")
+belo_horizonte_udh <- read.csv("./udh_queried_data/belo_horizonte_udh_queried.csv")
+curitiba_udh <- read.csv("./udh_queried_data/curtiba_udh_queried.csv")
+belem_udh <- read.csv("./udh_queried_data/belem_udh_queried.csv")
+goiania_udh <- read.csv("./udh_queried_data/goiania_udh_queried.csv")
+grande_vitoria_udh <- read.csv("./udh_queried_data/grande_vitoria_udh_queried.csv")
+florianopolis_udh <- read.csv("./udh_queried_data/florianopolis_udh_queried.csv")
+
+sao_paulo_udh_merged <- udh_merge_ex_with_in(brazil_df, sp_udh, 'sao paulo')
+fortaleza_udh_merged <- udh_merge_ex_with_in(brazil_df, fortaleza_udh, 'fortaleza')
+recife_udh_merged <- udh_merge_ex_with_in(brazil_df, recife_udh, 'recife')
+rio_dj_udh_merged <- udh_merge_ex_with_in(brazil_df, rio_dj_udh, 'rio de janeiro')
+salvador_udh_merged <- udh_merge_ex_with_in(brazil_df, salvador_udh, 'salvador')
+porto_alegre_udh_merged <- udh_merge_ex_with_in(brazil_df, porto_alegre_udh, 'porto alegre')
+natal_udh_merged <- udh_merge_ex_with_in(brazil_df, natal_udh, 'natal')
+maceio_udh_merged <- udh_merge_ex_with_in(brazil_df, maceio_udh, 'maceio')
+belo_horizonte_udh_merged <- udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, 'belo horizonte')
+curitiba_udh_merged <- udh_merge_ex_with_in(brazil_df, curitiba_udh, 'curitiba')
+belem_udh_merged <- udh_merge_ex_with_in(brazil_df, belem_udh, 'belem')
+goiania_udh_merged <- udh_merge_ex_with_in(brazil_df, goiania_udh, 'goiania')
+grande_vitoria_udh_merged <- udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, 'vitoria')
+florianopolis_udh_merged <- udh_merge_ex_with_in(brazil_df, florianopolis_udh, 'florianopolis')
+
+metros_1 <- rbind(sao_paulo_udh_merged, fortaleza_udh_merged)
+metros_1 <- rbind(metros_1, recife_udh_merged)
+metros_1 <- rbind(metros_1, rio_dj_udh_merged)
+metros_1 <- rbind(metros_1, salvador_udh_merged)
+metros_1 <- rbind(metros_1, porto_alegre_udh_merged)
+metros_1 <- rbind(metros_1, natal_udh_merged)
+metros_1 <- rbind(metros_1, maceio_udh_merged)
+metros_1 <- rbind(metros_1, belo_horizonte_udh_merged)
+metros_1 <- rbind(metros_1, curitiba_udh_merged)
+metros_1 <- rbind(metros_1, belem_udh_merged)
+metros_1 <- rbind(metros_1, goiania_udh_merged)
+metros_1 <- rbind(metros_1, grande_vitoria_udh_merged)
+metros_1 <- rbind(metros_1, florianopolis_udh_merged)
+
+
+
+
+
+hey <- glm(message_bool 
+           ~ `udh.IDHM.2010` 
+           + south 
+           + north
+           + udh.young_ratio
+           + udh.urbanity
+           
+           , 
+           data = metros_1, family = 'binomial')
+summary(hey)
+vif(hey)
+
+hey_2 <- lm(log(bef_nchar) 
+            ~ log(`udh.IDHM.2010`) 
+            + max_price
+            + item_count
+            + review_sent_wknd
+            + south 
+            + north
+            + udh.urbanity
+            
+            , 
+            data = metros_1[metros_1$message_bool == 1,])
+
+summary(hey_2)
+vif(hey_2)
+
 # ---------------------------------- #
 # NEXT: merge with original dataset  # ----------------------------------------
 # ---------------------------------- #
@@ -282,6 +370,14 @@ florianopolis_udh_merged <- udh_merge_ex_with_in(brazil_df, florianopolis_udh, '
 # NEXT: municipal level data thing   # ----------------------------------------
 # ---------------------------------- #
 
+# external data | municip level
+brazil_municip <- read_excel("./atlas_data/brazil_municipal.xlsx")
+
+new_data <- brazil_municip
+
+# Full 
+brazil_municip <- column_fixer(brazil_municip, 'municip')
+
 brazil_df <- brazil_df %>%
   mutate(customer_city = paste(customer_city, "(", sep = " "),
          customer_city = paste(customer_city, customer_state, sep = ""),
@@ -290,15 +386,22 @@ brazil_df <- brazil_df %>%
 brazil_df$customer_city <- tolower(brazil_df$customer_city)
 
 merry <- merge(brazil_df,
-               my_data,
+               brazil_municip,
                by.x = 'customer_city',
-               by.y = 'Territorialidades',
+               by.y = 'mc.Territorialidades',
                all.x = TRUE)
+
+
+
 
 
 nrow(merry[is.na(merry$`IDHM 2010`),])
 
 
+merry_nas <- merry[is.na(merry$`mc.IDHM 2010`),]
+
+
+colSums(is.na(merry))
 
 
 
