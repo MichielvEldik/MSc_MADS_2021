@@ -11,32 +11,7 @@ library(tidyr)
 library(dplyr)
 library(corrplot)
 library(FNN)
-
-
-# ------------- #
-# Load Datasets # -------------------------------------------------------------
-# ------------- #
-
-# internal data
-input <- read.csv("full_geomerged_df_3.csv")
-brazil_df <- input
-
-# external data | udh (neighborhood) level, by metrpopolitan region
-sp_udh <- read_excel("./atlas_data/sao_paulo_udh.xlsx")
-fortaleza_udh <- read_excel("./atlas_data/fortaleza_udh.xlsx")
-recife_udh <- read_excel("./atlas_data/recife_udh.xlsx")
-rio_dj_udh <- read_excel("./atlas_data/rio_dj_udh.xlsx")
-salvador_udh <- read_excel("./atlas_data/salvador_udh.xlsx")
-porto_alegre_udh <- read_excel("./atlas_data/porto_alegre_udh.xlsx")
-natal_udh <- read_excel("./atlas_data/natal_udh.xlsx")
-maceio_udh <- read_excel("./atlas_data/maceio_udh.xlsx")
-belo_horizonte_udh <- read_excel("./atlas_data/belo_horizonte_udh.xlsx")
-campinas_udh <- read_excel("./atlas_data/campinas_udh.xlsx")
-curitiba_udh <- read_excel("./atlas_data/curitiba_udh.xlsx")
-belem_udh <- read_excel("./atlas_data/belem_udh.xlsx")
-goiania_udh <- read_excel("./atlas_data/goiania_udh.xlsx")
-grande_vitoria_udh <- read_excel("./atlas_data/grande vitoria_udh.xlsx")
-florianopolis_udh <- read_excel("./atlas_data/florianopolis_udh.xlsx")
+library(tmaptools)
 
 # ------------------------------- #
 # Cleaning and deriving variables # -------------------------------------------
@@ -119,23 +94,6 @@ column_fixer <- function(new_data, data_level){
   }
 }
 
-# Salling function for various level datasets
-sp_udh <- column_fixer(sp_udh, 'udh')
-fortaleza_udh <- column_fixer(fortaleza_udh, "udh")
-recife_udh <- column_fixer(recife_udh, "udh")
-rio_dj_udh <- column_fixer(rio_dj_udh, "udh")
-salvador_udh <- column_fixer(salvador_udh, "udh")
-porto_alegre_udh <- column_fixer(porto_alegre_udh, "udh")
-natal_udh <- column_fixer(natal_udh, "udh")
-maceio_udh <- column_fixer(maceio_udh, "udh")
-belo_horizonte_udh <- column_fixer(belo_horizonte_udh, "udh")
-campinas_udh <- column_fixer(campinas_udh, "udh")
-curitiba_udh <- column_fixer(curitiba_udh, "udh")
-belem_udh <- column_fixer(belem_udh, "udh")
-goiania_udh <- column_fixer(goiania_udh, "udh")
-grande_vitoria_udh <- column_fixer(grande_vitoria_udh, "udh")
-florianopolis_udh <- column_fixer(florianopolis_udh, "udh")
-
 # --------- #
 # udh query # ----------------------------------------------------------------
 # --------- #
@@ -188,50 +146,44 @@ coordinate_retriever <- function(input_udh_data, city_name) {
   return(input_udh_data_retrieved_cors)
 }
 
-# call function with datasets
-sp_udh <- coordinate_retriever(sp_udh, 'sao_paulo')
-fortaleza_udh <- coordinate_retriever(fortaleza_udh, 'fortaleza')
-recife_udh <- coordinate_retriever(recife_udh, 'recife')
-rio_dj_udh <- coordinate_retriever(rio_dj_udh, 'rio de janeiro')
-salvador_udh <- coordinate_retriever(salvador_udh, "salvador")
-porto_alegre_udh <- coordinate_retriever(porto_alegre_udh, "porto alegre")
-natal_udh <- coordinate_retriever(natal_udh, "natal")
-maceio_udh <- coordinate_retriever(maceio_udh, "maceio")
-belo_horizonte_udh <- coordinate_retriever(belo_horizonte_udh, "belo horizonte")
-campinas_udh <- coordinate_retriever(campinas_udh, "campinas")
-curitiba_udh <- coordinate_retriever(curitiba_udh, "curitiba")
-belem_udh <- coordinate_retriever(belem_udh, "belem")
-goiania_udh <- coordinate_retriever(goiania_udh, "goiania")
-grande_vitoria_udh <- coordinate_retriever(grande_vitoria_udh, "vitoria")
-florianopolis_udh <- coordinate_retriever(florianopolis_udh, "florianopolis")
-
-
-# write as csv to avoid doing things over and over again
-write.csv(sp_udh, "./udh_queried_data/sao_paulo_udh_queried.csv")
-write.csv(fortaleza_udh, "./udh_queried_data/fortaleza_udh_queried.csv")
-write.csv(recife_udh, "./udh_queried_data/recife_udh_queried.csv")
-write.csv(rio_dj_udh, "./udh_queried_data/rio_dj_udh_queried.csv")
-write.csv(salvador_udh, "./udh_queried_data/salvador_udh_queried.csv")
-write.csv(porto_alegre_udh, "./udh_queried_data/porto_alegre_udh_queried.csv")
-write.csv(natal_udh, "./udh_queried_data/natal_udh_queried.csv")
-write.csv(maceio_udh, "./udh_queried_data/maceio_udh_queried.csv")
-write.csv(belo_horizonte_udh, "./udh_queried_data/belo_horizonte_udh_queried.csv")
-write.csv(curitiba_udh, "./udh_queried_data/curtiba_udh_queried.csv")
-write.csv(belem_udh, "./udh_queried_data/belem_udh_queried.csv")
-write.csv(goiania_udh, "./udh_queried_data/goiania_udh_queried.csv")
-write.csv(grande_vitoria_udh, "./udh_queried_data/grande_vitoria_udh_queried.csv")
-write.csv(florianopolis_udh, "./udh_queried_data/florianopolis_udh_queried.csv")
-
-
-
-
-
 # ---------------------------- #
 # udh merge with internal data # ----------------------------------------------
 # ---------------------------- #
 
 # function that combines udh-level dataset with data from internal
-udh_merge_ex_with_in <- function(internal_data, external_data, city) {
+udh_merge_ex_with_in <- function(internal_data, external_data, metro_munics) {
+  
+  external_data <- external_data[
+    !is.na(external_data$udh.lat) | !is.na(external_data$udh.long),]
+  
+  internal_data <- internal_data[
+    internal_data$customer_city %in% metro_munics & !is.na(internal_data$centroid_lat),]
+  
+  nn2 <- get.knnx(
+    external_data[,c("udh.lat", "udh.long")], 
+    internal_data[,c("centroid_lat", "centroid_long")], 
+    2)
+  
+  internal_data$local_index <- c(1:nrow(internal_data)) 
+  external_data$local_index <- c(1:nrow(external_data))
+  
+  internal_data$index_other_data <- nn2$nn.index[,1]
+  internal_data$dist_lat <- nn2$nn.dist[,1]
+  internal_data$dist_long <- nn2$nn.dist[,2]
+  internal_data$total_distancjes <- internal_data$dist_lat + internal_data$dist_long
+  
+  married <- merge(internal_data,
+                   external_data,
+                   by.x = "index_other_data",
+                   by.y = "local_index")
+  return(married)
+}
+
+# ------------------------ #
+# OLD udh_merge_ex_with_in # -------------------------------------------------- 
+# ------------------------ #
+
+old_udh_merge_ex_with_in <- function(internal_data, external_data, city) {
   
   external_data <- external_data[
     !is.na(external_data$udh.lat) | !is.na(external_data$udh.long),]
@@ -259,30 +211,664 @@ udh_merge_ex_with_in <- function(internal_data, external_data, city) {
   return(married)
 }
 
-sao_paulo_udh_merged <- udh_merge_ex_with_in(brazil_df, sp_udh, 'sao paulo')
-fortaleza_udh_merged <- udh_merge_ex_with_in(brazil_df, fortaleza_udh, 'fortaleza')
-recife_udh_merged <- udh_merge_ex_with_in(brazil_df, recife_udh, 'recife')
-rio_dj_udh_merged <- udh_merge_ex_with_in(brazil_df, rio_dj_udh, 'rio de janeiro')
-salvador_udh_merged <- udh_merge_ex_with_in(brazil_df, salvador_udh, 'salvador')
-porto_alegre_udh_merged <- udh_merge_ex_with_in(brazil_df, porto_alegre_udh, 'porto alegre')
-natal_udh_merged <- udh_merge_ex_with_in(brazil_df, natal_udh, 'natal')
-maceio_udh_merged <- udh_merge_ex_with_in(brazil_df, maceio_udh, 'maceio')
-belo_horizonte_udh_merged <- udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, 'belo horizonte')
-curitiba_udh_merged <- udh_merge_ex_with_in(brazil_df, curitiba_udh, 'curitiba')
-belem_udh_merged <- udh_merge_ex_with_in(brazil_df, belem_udh, 'belem')
-goiania_udh_merged <- udh_merge_ex_with_in(brazil_df, goiania_udh, 'goiania')
-grande_vitoria_udh_merged <- udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, 'vitoria')
-florianopolis_udh_merged <- udh_merge_ex_with_in(brazil_df, florianopolis_udh, 'florianopolis')
+# ------------------------------------ #
+# Define municipalities per metro area # -------------------------------------
+# ------------------------------------ #
 
 
 
 
+# Region: North
+# State: Para (pa)
+belem_metro_municips <- c(
+  "ANANINDEUA",
+  "BELÉM",
+  "BENEVIDES",
+  "CASTANHAL",
+  "MARITUBA",
+  "SANTA BÁRBARA DO PARÁ",
+  "SANTA IZABEL DO PARÁ")
+
+belem_metro_municips <- iconv(belem_metro_municips, to = 'ASCII//TRANSLIT')
+belem_metro_municips <- tolower(belem_metro_municips)
+belem_metro_municips <- paste(belem_metro_municips, "(pa)")
 
 
+# Region: North 
+# State: Amazonas (am)
+manaus_metro_municips <- c(
+  "AUTAZES",
+  "CAREIRO",
+  "CAREIRO DA VÁRZEA",
+  "IRANDUBA",
+  "ITACOATIARA",
+  "ITAPIRANGA",
+  "MANACAPURU",
+  "MANAQUIRI",
+  "MANAUS",
+  "NOVO AIRÃO",
+  "PRESIDENTE FIGUEIREDO",
+  "RIO PRETO DA EVA",
+  "SILVES")
+
+manaus_metro_municips <- iconv(manaus_metro_municips, to = 'ASCII//TRANSLIT')
+manaus_metro_municips <- tolower(manaus_metro_municips)
+manaus_metro_municips <- paste(manaus_metro_municips, "(am)")
+
+
+# Region: Northeast
+# State: Ceara (ce) 
+fortaleza_metro_municips <- c(
+  "Aquiraz", 
+  "Cascavel",
+  "Caucaia",
+  "Chorozinho",
+  "Eusébio",
+  "Fortaleza",
+  "Guaiuba", 
+  "Horizonte",
+  "Itaitinga",
+  "Maracanaú",
+  "Maranguape", 
+  "Pacajus",
+  "Pacatuba",
+  "Paracuru",
+  "Paraipaba",
+  "Pindoretama",
+  "São Gonçalo do Amarante",
+  "São Luís do Curu e Trairi")
+fortaleza_metro_municips <- iconv(fortaleza_metro_municips, to = 'ASCII//TRANSLIT')
+fortaleza_metro_municips <- tolower(fortaleza_metro_municips)
+fortaleza_metro_municips <- paste(fortaleza_metro_municips, "(ce)")
+
+# Region: Northeast
+# State: Pernambuco (pe)
+recife_metro_municips <- c(
+  "ABREU E LIMA",
+  "ARAÇOIABA",
+  "CABO DE SANTO AGOSTINHO",
+  "CAMARAGIBE",
+  "GOIANA",
+  "IGARASSU",
+  "ILHA DE ITAMARACÁ",
+  "IPOJUCA",
+  "ITAPISSUMA",
+  "JABOATÃO DOS GUARARAPES",
+  "MORENO",
+  "OLINDA",
+  "PAULISTA",
+  "RECIFE",
+  "SÃO LOURENÇO DA MATA")
+
+recife_metro_municips <- iconv(recife_metro_municips, to = 'ASCII//TRANSLIT')
+recife_metro_municips <- tolower(recife_metro_municips)
+recife_metro_municips <- paste(recife_metro_municips, "(pe)")
+
+# Region: Northeast
+# State: Bahia (ba)
+salvador_metro_municips <- c(
+  "CAMAÇARI",
+  "CANDEIAS",
+  "DIAS D’ÁVILA",
+  "ITAPARICA",
+  "LAURO DE FREITAS",
+  "MADRE DE DEUS",
+  "MATA DE SÃO JOÃO",
+  "POJUCA",
+  "SALVADOR",
+  "SÃO FRANCISCO DO CONDE",
+  "SÃO SEBASTIÃO DO PASSÉ",
+  "SIMÕES FILHO",
+  "VERA CRUZ")
+
+salvador_metro_municips <- iconv(salvador_metro_municips, to = 'ASCII//TRANSLIT')
+salvador_metro_municips <- tolower(salvador_metro_municips)
+salvador_metro_municips <- paste(salvador_metro_municips, "(ba)")
+
+# Region: Northeast
+# State: Rio Grande do Norte (rn)
+natal_metro_municips <- c(
+  "ARÊS",
+  "CEARÁ-MIRIM",
+  "EXTREMOZ",
+  "GOIANINHA",
+  "IELMO MARINHO",
+  "MACAÍBA",
+  "MAXARANGUAPE",
+  "MONTE ALEGRE",
+  "NATAL",
+  "NÍSIA FLORESTA",
+  "PARNAMIRIM",
+  "SÃO GONÇALO DO AMARANTE",
+  "SÃO JOSÉ DE MIPIBU",
+  "VERA CRUZ")
+
+natal_metro_municips <- iconv(natal_metro_municips, to = 'ASCII//TRANSLIT')
+natal_metro_municips <- tolower(natal_metro_municips)
+natal_metro_municips <- paste(natal_metro_municips, "(rn)")
+
+
+# Region: Northeast
+# State: Alagoas (al)
+maceio_metro_municips <- c(
+  "ATALAIA",
+  "BARRA DE SANTO ANTÔNIO",
+  "BARRA DE SÃO MIGUEL",
+  "COQUEIRO SECO",
+  "MACEIÓ",
+  "MARECHAL DEODORO",
+  "MESSIAS",
+  "MURICI",
+  "PARIPUEIRA",
+  "PILAR",
+  "RIO LARGO",
+  "SANTA LUZIA DO NORTE",
+  "SATUBA")
+
+maceio_metro_municips <- iconv(maceio_metro_municips, to = 'ASCII//TRANSLIT')
+maceio_metro_municips <- tolower(maceio_metro_municips)
+maceio_metro_municips <- paste(maceio_metro_municips, "(al)")
+
+# Region: Northeast
+# State: Maranhao (ma)
+
+sao_luis_metro_municips <- c(
+  "ALCÂNTARA",
+  "BACABEIRA",
+  "ICATU",
+  "PAÇO DO LUMIAR",
+  "RAPOSA",
+  "ROSÁRIO",
+  "SANTA RITA",
+  "SÃO JOSÉ DE RIBAMAR",
+  "SÃO LUÍS",
+  "AXIXÁ",
+  "CACHOEIRA GRANDE",
+  "MORROS",
+  "PRESIDENTE JUSCELINO")
+
+sao_luis_metro_municips <- iconv(sao_luis_metro_municips, to = 'ASCII//TRANSLIT')
+sao_luis_metro_municips <- tolower(sao_luis_metro_municips)
+sao_luis_metro_municips <- paste(sao_luis_metro_municips, "(ma)")
+
+
+# Region: Central-west
+# State: Goias (go)
+goiania_metro_municips <- c(
+  "ABADIA DE GOIÁS",
+  "APARECIDA DE GOIÂNIA",
+  "ARAGOIÂNIA",
+  "BELA VISTA DE GOIÁS",
+  "BONFINÓPOLIS",
+  "BRAZABRANTES",
+  "CALDAZINHA",
+  "CATURAÍ",
+  "GOIANÁPOLIS",
+  "GOIANIRA",
+  "GOIÂNIA",
+  "GUAPÓ",
+  "HIDROLÂNDIA",
+  "INHUMAS",
+  "NERÓPOLIS",
+  "NOVA VENEZA",
+  "SANTO ANTÔNIO DE GOIÁS",
+  "SENADOR CANEDO",
+  "TEREZÓPOLIS DE GOIÁS",
+  "TRINDADE")
+
+goiania_metro_municips <- iconv(goiania_metro_municips, to = 'ASCII//TRANSLIT')
+goiania_metro_municips <- tolower(goiania_metro_municips)
+goiania_metro_municips <- paste(goiania_metro_municips, "(go)")
+
+
+# Region: Central-west
+# State: Distrito Federal (df)
+
+brasilia_metro_municips <- c(
+  "brasilia",
+  "ceilandia",
+  "guara",
+  "santa maria",
+  "sobradinho",
+  "taguatinga")
+
+brasilia_metro_municips <- iconv(brasilia_metro_municips, to = 'ASCII//TRANSLIT')
+brasilia_metro_municips <- tolower(brasilia_metro_municips)
+brasilia_metro_municips <- paste(brasilia_metro_municips, "(df)")
+
+
+
+
+# Region: Southeast 
+# State: Sao Paulo (sp)
+sao_paulo_metro_municips <- c(
+  "São Paulo",
+  "Arujá",
+  "Barueri",
+  "Biritiba Mirim",
+  "Caieiras",
+  "Cajamar",
+  "Carapicuíba",
+  "Cotia",
+  "Diadema",
+  "Embu",
+  "Embu-Guaçu",
+  "Ferraz de Vasconcelos",
+  "Francisco Morato",
+  "Franco da Rocha",
+  "Guararema",
+  "Guarulhos",
+  "Itapecerica da Serra",
+  "Itapevi",
+  "Itaquaquecetuba",
+  "Jandira",
+  "Juquitiba",
+  "Mairiporã",
+  "Mauá",
+  "Mogi das Cruzes",
+  "Osasco",
+  "Pirapora do Bom Jesus",
+  "Poá",
+  "Ribeirão Pires",
+  "Rio Grande da Serra",
+  "Salesópolis",
+  "Santa Isabel",
+  "Santana do Parnaíba",
+  "Santo André",
+  "São Bernardo do Campo",
+  "São Caetano do Sul",
+  "São Lourenço da Serra Suzano",
+  "Suzano",
+  "Taboão da Serra",
+  "Vargem Grande Paulista")
+sao_paulo_metro_municips <- iconv(sao_paulo_metro_municips, to = 'ASCII//TRANSLIT')
+sao_paulo_metro_municips <- tolower(sao_paulo_metro_municips)
+sao_paulo_metro_municips <- paste(sao_paulo_metro_municips, "(sp)")
+
+# Region: Southeast
+# State: Rio de Janeiro (rj)
+rio_dj_metro_municips <- c(
+  "CACHOEIRAS DE MACACU",
+  "BELFORD ROXO",
+  "DUQUE DE CAXIAS",
+  "GUAPIMIRIM",
+  "ITABORAÍ",
+  "ITAGUAÍ",
+  "JAPERI",
+  "MAGÉ",
+  "MARICÁ",
+  "MESQUITA",
+  "NILÓPOLIS",
+  "NITERÓI",
+  "NOVA IGUAÇU",
+  "PARACAMBI",
+  "QUEIMADOS",
+  "RIO BONITO",
+  "RIO DE JANEIRO",
+  "SÃO GONÇALO",
+  "SÃO JOÃO DE MERITI",
+  "SEROPÉDICA",
+  "TANGUÁ")
+
+rio_dj_metro_municips <- iconv(rio_dj_metro_municips, to = 'ASCII//TRANSLIT')
+rio_dj_metro_municips <- tolower(rio_dj_metro_municips)
+rio_dj_metro_municips <- paste(rio_dj_metro_municips, "(rj)")
+
+# Region: Southeast
+# State: Minas Gerais (mg)
+belo_horizonte_metro_municips <- c(
+  "BALDIM",
+  "BELO HORIZONTE",
+  "BETIM",
+  "BRUMADINHO",
+  "CAETÉ",
+  "CAPIM BRANCO",
+  "CONFINS",
+  "CONTAGEM",
+  "ESMERALDAS",
+  "FLORESTAL",
+  "IBIRITÉ",
+  "IGARAPÉ",
+  "ITAGUARA",
+  "ITATIAIUÇU",
+  "JABOTICATUBAS",
+  "JUATUBA",
+  "LAGOA SANTA",
+  "MÁRIO CAMPOS",
+  "MATEUS LEME",
+  "MATOZINHOS",
+  "NOVA LIMA",
+  "NOVA UNIÃO",
+  "PEDRO LEOPOLDO",
+  "RAPOSOS",
+  "RIBEIRÃO DAS NEVES",
+  "RIO ACIMA",
+  "RIO MANSO",
+  "SABARÁ",
+  "SANTA LUZIA",
+  "SÃO JOAQUIM DE BICAS",
+  "SÃO JOSÉ DA LAPA",
+  "SARZEDO",
+  "TAQUARAÇU DE MINAS",
+  "VESPASIANO")
+
+belo_horizonte_metro_municips <- iconv(belo_horizonte_metro_municips, to = 'ASCII//TRANSLIT')
+belo_horizonte_metro_municips <- tolower(belo_horizonte_metro_municips)
+belo_horizonte_metro_municips <- paste(belo_horizonte_metro_municips, "(mg)")
+
+
+# Region: Southeast
+# State: Espirito Santo (es)
+grande_vitoria_metro_municips <- c(
+  "CARIACICA",
+  "FUNDÃO",
+  "GUARAPARI",
+  "SERRA",
+  "VIANA",
+  "VILA VELHA",
+  "VITÓRIA")
+grande_vitoria_metro_municips <- iconv(grande_vitoria_metro_municips, to = 'ASCII//TRANSLIT')
+grande_vitoria_metro_municips <- tolower(grande_vitoria_metro_municips)
+grande_vitoria_metro_municips <- paste(grande_vitoria_metro_municips, "(es)")
+
+# Region: Southeast
+# State: Sao Paulo (sp)
+
+sorocaba_metro_municips <- c(
+  "ALAMBARI",
+  "ALUMÍNIO",
+  "ARAÇARIGUAMA",
+  "ARAÇOIABA DA SERRA",
+  "BOITUVA",
+  "CAPELA DO ALTO",
+  "CERQUILHO",
+  "CESÁRIO LANGE",
+  "IBIÚNA",
+  "IPERÓ",
+  "ITAPETININGA",
+  "ITU",
+  "JUMIRIM",
+  "MAIRINQUE",
+  "PIEDADE",
+  "PILAR DO SUL",
+  "PORTO FELIZ",
+  "SALTO",
+  "SALTO DE PIRAPORA",
+  "SÃO MIGUEL ARCANJO",
+  "SÃO ROQUE",
+  "SARAPUÍ",
+  "SOROCABA",
+  "TAPIRAÍ",
+  "TATUÍ",
+  "TIETÊ",
+  "VOTORANTIM")
+
+sorocaba_metro_municips <- iconv(sorocaba_metro_municips, to = 'ASCII//TRANSLIT')
+sorocaba_metro_municips <- tolower(sorocaba_metro_municips)
+sorocaba_metro_municips <- paste(sorocaba_metro_municips, "(sp)")
+
+# Region: Southeast
+# State: Sao Paulo
+baixada_santista_metro_municips <- c(
+  "Bertioga",
+  "Cubatão",
+  "Guarujá",
+  "Itanhaém",
+  "Mongaguá",
+  "Peruíbe",
+  "Praia Grande",
+  "Santos",
+  "São Vicente")
+
+baixada_santista_metro_municips <- iconv(baixada_santista_metro_municips, to = 'ASCII//TRANSLIT')
+baixada_santista_metro_municips <- tolower(baixada_santista_metro_municips)
+baixada_santista_metro_municips <- paste(baixada_santista_metro_municips, "(sp)")
+
+# Region: Southeast
+# State: Sao Paulo
+campinas_metro_municips <- c(
+  "Americana",
+  "Artur Nogueira",
+  "Campinas",
+  "Cosmópolis",
+  "Engenheiro Coelho",
+  "Holambra",
+  "Hortolândia",
+  "Indaiatuba",
+  "Itatiba",
+  "Jaguariúna",
+  "Monte Mor",
+  "Morungaba",
+  "Nova Odessa",
+  "Paulínia",
+  "Pedreira",
+  "Santa Bárbara d'Oeste",
+  "Santo Antônio de Posse",
+  "Sumaré",
+  "Valinhos",
+  "Vinhedo")
+
+
+campinas_metro_municips <- iconv(campinas_metro_municips, to = 'ASCII//TRANSLIT')
+campinas_metro_municips <- tolower(campinas_metro_municips)
+campinas_metro_municips <- paste(campinas_metro_municips, "(sp)")
+
+
+
+# Region: South
+# State: Rio Grande do Sul (rs)
+porto_alegre_metro_municips <- c(
+  "ALVORADA",
+  "ARARICÁ",
+  "ARROIO DOS RATOS",
+  "CACHOEIRINHA",
+  "CAMPO BOM",
+  "CANOAS",
+  "CAPELA DE SANTANA",
+  "CHARQUEADAS",
+  "DOIS IRMÃOS",
+  "ELDORADO DO SUL",
+  "ESTÂNCIA VELHA",
+  "ESTEIO",
+  "GLORINHA",
+  "GRAVATAÍ",
+  "GUAÍBA",
+  "IGREJINHA",
+  "IVOTI",
+  "MONTENEGRO",
+  "NOVA HARTZ",
+  "NOVA SANTA RITA",
+  "NOVO HAMBURGO",
+  "PAROBÉ",
+  "PORTÃO",
+  "PORTO ALEGRE",
+  "ROLANTE",
+  "SANTO ANTÔNIO DA PATRULHA",
+  "SÃO JERÔNIMO",
+  "SÃO LEOPOLDO",
+  "SÃO SEBASTIÃO DO CAÍ",
+  "SAPIRANGA",
+  "SAPUCAIA DO SUL",
+  "TAQUARA",
+  "TRIUNFO",
+  "VIAMÃO")
+
+porto_alegre_metro_municips <- iconv(porto_alegre_metro_municips, to = 'ASCII//TRANSLIT')
+porto_alegre_metro_municips <- tolower(porto_alegre_metro_municips)
+porto_alegre_metro_municips <- paste(porto_alegre_metro_municips, "(rs)")
+
+# Region: South
+# State: Parana (pr)
+curitiba_metro_municips <- c(
+  "ADRIANÓPOLIS",
+  "AGUDOS DO SUL",
+  "ALMIRANTE TAMANDARÉ",
+  "ARAUCÁRIA",
+  "BALSA NOVA",
+  "BOCAIÚVA DO SUL",
+  "CAMPINA GRANDE DO SUL",
+  "CAMPO DO TENENTE",
+  "CAMPO LARGO",
+  "CAMPO MAGRO",
+  "CERRO AZUL",
+  "COLOMBO",
+  "CONTENDA",
+  "CURITIBA",
+  "DOUTOR ULYSSES",
+  "FAZENDA RIO GRANDE",
+  "ITAPERUÇU",
+  "LAPA",
+  "MANDIRITUBA",
+  "PIÊN",
+  "PINHAIS",
+  "PIRAQUARA",
+  "QUATRO BARRAS",
+  "QUITANDINHA",
+  "RIO BRANCO DO SUL",
+  "RIO NEGRO",
+  "SÃO JOSÉ DOS PINHAIS",
+  "TIJUCAS DO SUL",
+  "TUNAS DO PARANÁ")
+
+curitiba_metro_municips <- iconv(curitiba_metro_municips, to = 'ASCII//TRANSLIT')
+curitiba_metro_municips <- tolower(curitiba_metro_municips)
+curitiba_metro_municips <- paste(curitiba_metro_municips, "(pr)")
+
+
+
+# Region: South
+# State: Santa Catarina (sc)
+
+florianopolis_metro_municips <- c(
+  "ÁGUAS MORNAS",
+  "ANTÔNIO CARLOS",
+  "BIGUAÇU",
+  "FLORIANÓPOLIS",
+  "GOVERNADOR CELSO RAMOS",
+  "PALHOÇA",
+  "SANTO AMARO DA IMPERATRIZ",
+  "SÃO JOSÉ",
+  "SÃO PEDRO DE ALCÂNTARA")
+
+florianopolis_metro_municips <- iconv(florianopolis_metro_municips, to = 'ASCII//TRANSLIT')
+florianopolis_metro_municips <- tolower(florianopolis_metro_municips)
+florianopolis_metro_municips <- paste(florianopolis_metro_municips, "(sc)")
+
+# ---------------------------------------------- #
+# Call functions part (NO NEED TO EXECUTE AGAIN) # ----------------------------
+# ---------------------------------------------- #
+
+# external data | udh (neighborhood) level, by metrpopolitan region
+# Southeast 
+sp_udh <- read_excel("./atlas_data/sao_paulo_udh.xlsx")
+fortaleza_udh <- read_excel("./atlas_data/fortaleza_udh.xlsx")
+recife_udh <- read_excel("./atlas_data/recife_udh.xlsx")
+rio_dj_udh <- read_excel("./atlas_data/rio_dj_udh.xlsx")
+salvador_udh <- read_excel("./atlas_data/salvador_udh.xlsx")
+porto_alegre_udh <- read_excel("./atlas_data/porto_alegre_udh.xlsx")
+natal_udh <- read_excel("./atlas_data/natal_udh.xlsx")
+maceio_udh <- read_excel("./atlas_data/maceio_udh.xlsx")
+belo_horizonte_udh <- read_excel("./atlas_data/belo_horizonte_udh.xlsx")
+campinas_udh <- read_excel("./atlas_data/campinas_udh.xlsx")
+curitiba_udh <- read_excel("./atlas_data/curitiba_udh.xlsx")
+belem_udh <- read_excel("./atlas_data/belem_udh.xlsx")
+goiania_udh <- read_excel("./atlas_data/goiania_udh.xlsx")
+grande_vitoria_udh <- read_excel("./atlas_data/grande vitoria_udh.xlsx")
+florianopolis_udh <- read_excel("./atlas_data/florianopolis_udh.xlsx")
+manaus_udh <- read_excel("./atlas_data/manaus_udh.xlsx")
+sao_luis_udh <- read_excel("./atlas_data/sao_luis_udh.xlsx")
+sorocaba_udh <- read_excel("./atlas_data/sorocaba_udh.xlsx")
+baixada_santista_udh <- read_excel("./atlas_data/baixada_santista_udh.xlsx")
+brasilia_udh <- read_excel("./atlas_data/brasilia_udh.xlsx")
+
+# Salling function for various level datasets
+sp_udh <- column_fixer(sp_udh, 'udh')
+fortaleza_udh <- column_fixer(fortaleza_udh, "udh")
+recife_udh <- column_fixer(recife_udh, "udh")
+rio_dj_udh <- column_fixer(rio_dj_udh, "udh")
+salvador_udh <- column_fixer(salvador_udh, "udh")
+porto_alegre_udh <- column_fixer(porto_alegre_udh, "udh")
+natal_udh <- column_fixer(natal_udh, "udh")
+maceio_udh <- column_fixer(maceio_udh, "udh")
+belo_horizonte_udh <- column_fixer(belo_horizonte_udh, "udh")
+campinas_udh <- column_fixer(campinas_udh, "udh")
+curitiba_udh <- column_fixer(curitiba_udh, "udh")
+belem_udh <- column_fixer(belem_udh, "udh")
+goiania_udh <- column_fixer(goiania_udh, "udh")
+grande_vitoria_udh <- column_fixer(grande_vitoria_udh, "udh")
+florianopolis_udh <- column_fixer(florianopolis_udh, "udh")
+manaus_udh <- column_fixer(manaus_udh, "udh")
+sao_luis_udh <- column_fixer(sao_luis_udh, "udh")
+sorocaba_udh <- column_fixer(sorocaba_udh, "udh")
+baixada_santista_udh <- column_fixer(baixada_santista_udh, "udh")
+brasilia_udh <- column_fixer(brasilia_udh, "udh")
+
+# call function with datasets
+sp_udh <- coordinate_retriever(sp_udh, 'sao paulo')
+fortaleza_udh <- coordinate_retriever(fortaleza_udh, 'fortaleza')
+recife_udh <- coordinate_retriever(recife_udh, 'recife')
+rio_dj_udh <- coordinate_retriever(rio_dj_udh, 'rio de janeiro')
+salvador_udh <- coordinate_retriever(salvador_udh, "salvador")
+porto_alegre_udh <- coordinate_retriever(porto_alegre_udh, "porto alegre")
+natal_udh <- coordinate_retriever(natal_udh, "natal")
+maceio_udh <- coordinate_retriever(maceio_udh, "maceio")
+belo_horizonte_udh <- coordinate_retriever(belo_horizonte_udh, "belo horizonte")
+campinas_udh <- coordinate_retriever(campinas_udh, "campinas")
+curitiba_udh <- coordinate_retriever(curitiba_udh, "curitiba")
+belem_udh <- coordinate_retriever(belem_udh, "belem")
+goiania_udh <- coordinate_retriever(goiania_udh, "goiania")
+grande_vitoria_udh <- coordinate_retriever(grande_vitoria_udh, "vitoria")
+florianopolis_udh <- coordinate_retriever(florianopolis_udh, "florianopolis")
+manaus_udh <- coordinate_retriever(manaus_udh, "manaus")
+sao_luis_udh <- coordinate_retriever(sao_luis_udh, "sao luis")
+sorocaba_udh <- coordinate_retriever(sorocaba_udh, "sorocaba")
+baixada_santista_udh <- coordinate_retriever(baixada_santista_udh, "baixada santista")
+brasilia_udh <- coordinate_retriever(brasilia_udh, "distrito federal")
+
+# write as csv to avoid doing things over and over again
+write.csv(sp_udh, "./udh_queried_data/sao_paulo_udh_queried.csv")
+write.csv(fortaleza_udh, "./udh_queried_data/fortaleza_udh_queried.csv")
+write.csv(recife_udh, "./udh_queried_data/recife_udh_queried.csv")
+write.csv(rio_dj_udh, "./udh_queried_data/rio_dj_udh_queried.csv")
+write.csv(salvador_udh, "./udh_queried_data/salvador_udh_queried.csv")
+write.csv(porto_alegre_udh, "./udh_queried_data/porto_alegre_udh_queried.csv")
+write.csv(natal_udh, "./udh_queried_data/natal_udh_queried.csv")
+write.csv(maceio_udh, "./udh_queried_data/maceio_udh_queried.csv")
+write.csv(belo_horizonte_udh, "./udh_queried_data/belo_horizonte_udh_queried.csv")
+write.csv(campinas_udh, "./udh_queried_data/campinas_udh_queried.csv")
+write.csv(curitiba_udh, "./udh_queried_data/curtiba_udh_queried.csv")
+write.csv(belem_udh, "./udh_queried_data/belem_udh_queried.csv")
+write.csv(goiania_udh, "./udh_queried_data/goiania_udh_queried.csv")
+write.csv(grande_vitoria_udh, "./udh_queried_data/grande_vitoria_udh_queried.csv")
+write.csv(florianopolis_udh, "./udh_queried_data/florianopolis_udh_queried.csv")
+write.csv(manaus_udh, "./udh_queried_data/manaus_udh_queried.csv")
+write.csv(sao_luis_udh, "./udh_queried_data/sao_luis_udh_queried.csv")
+write.csv(sorocaba_udh, "./udh_queried_data/sorocaba_udh_queried.csv")
+write.csv(baixada_santista_udh, "./udh_queried_data/baixada_santista_udh_queried.csv")
+write.csv(brasilia_udh, "./udh_queried_data/brasilia_udh_queried.csv")
+
+
+       # ----------------- #
+------ # outlier detection # --------------------------------------------------
+       # ----------------- #
 
 
 
 # ------------------------- # Whole process sped up # -------------------------
+
+# internal data
+
+input <- read.csv("full_geomerged_df_3.csv")
+brazil_df <- input
+brazil_df <- brazil_df %>%
+  mutate(customer_city = paste(customer_city, "(", sep = " "),
+         customer_city = paste(customer_city, customer_state, sep = ""),
+         customer_city = paste(customer_city, ")", sep=""),
+         
+         # already done beforehand but do it again just to be certain
+         customer_city = tolower(customer_city),
+         customer_city = iconv(customer_city, to = 'ASCII//TRANSLIT')
+        )
 
 sp_udh <- read.csv("./udh_queried_data/sao_paulo_udh_queried.csv")
 fortaleza_udh <- read.csv("./udh_queried_data/fortaleza_udh_queried.csv")
@@ -293,26 +879,80 @@ porto_alegre_udh <- read.csv("./udh_queried_data/porto_alegre_udh_queried.csv")
 natal_udh <- read.csv("./udh_queried_data/natal_udh_queried.csv")
 maceio_udh <- read.csv("./udh_queried_data/maceio_udh_queried.csv")
 belo_horizonte_udh <- read.csv("./udh_queried_data/belo_horizonte_udh_queried.csv")
+campinas_udh <- read.csv("./udh_queried_data/campinas_udh_queried.csv")
 curitiba_udh <- read.csv("./udh_queried_data/curtiba_udh_queried.csv")
 belem_udh <- read.csv("./udh_queried_data/belem_udh_queried.csv")
 goiania_udh <- read.csv("./udh_queried_data/goiania_udh_queried.csv")
 grande_vitoria_udh <- read.csv("./udh_queried_data/grande_vitoria_udh_queried.csv")
 florianopolis_udh <- read.csv("./udh_queried_data/florianopolis_udh_queried.csv")
+manaus_udh <- read.csv("./udh_queried_data/manaus_udh_queried.csv")
+sao_luis_udh <- read.csv("./udh_queried_data/sao_luis_udh_queried.csv")
+sorocaba_udh <-read.csv("./udh_queried_data/sorocaba_udh_queried.csv")
+baixada_santista_udh <- read.csv("./udh_queried_data/baixada_santista_udh_queried.csv")
+brasilia_udh <- read.csv("./udh_queried_data/brasilia_udh_queried.csv")
 
-sao_paulo_udh_merged <- udh_merge_ex_with_in(brazil_df, sp_udh, 'sao paulo')
-fortaleza_udh_merged <- udh_merge_ex_with_in(brazil_df, fortaleza_udh, 'fortaleza')
-recife_udh_merged <- udh_merge_ex_with_in(brazil_df, recife_udh, 'recife')
-rio_dj_udh_merged <- udh_merge_ex_with_in(brazil_df, rio_dj_udh, 'rio de janeiro')
-salvador_udh_merged <- udh_merge_ex_with_in(brazil_df, salvador_udh, 'salvador')
-porto_alegre_udh_merged <- udh_merge_ex_with_in(brazil_df, porto_alegre_udh, 'porto alegre')
-natal_udh_merged <- udh_merge_ex_with_in(brazil_df, natal_udh, 'natal')
-maceio_udh_merged <- udh_merge_ex_with_in(brazil_df, maceio_udh, 'maceio')
-belo_horizonte_udh_merged <- udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, 'belo horizonte')
-curitiba_udh_merged <- udh_merge_ex_with_in(brazil_df, curitiba_udh, 'curitiba')
-belem_udh_merged <- udh_merge_ex_with_in(brazil_df, belem_udh, 'belem')
-goiania_udh_merged <- udh_merge_ex_with_in(brazil_df, goiania_udh, 'goiania')
-grande_vitoria_udh_merged <- udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, 'vitoria')
-florianopolis_udh_merged <- udh_merge_ex_with_in(brazil_df, florianopolis_udh, 'florianopolis')
+# New merge functions
+sao_paulo_udh_merged <- udh_merge_ex_with_in(brazil_df, sp_udh, sao_paulo_metro_municips)
+fortaleza_udh_merged <- udh_merge_ex_with_in(brazil_df, fortaleza_udh, fortaleza_metro_municips)
+recife_udh_merged <- udh_merge_ex_with_in(brazil_df, recife_udh, recife_metro_municips)
+rio_dj_udh_merged <- udh_merge_ex_with_in(brazil_df, rio_dj_udh, rio_dj_metro_municips)
+salvador_udh_merged <- udh_merge_ex_with_in(brazil_df, salvador_udh, salvador_metro_municips)
+porto_alegre_udh_merged <- udh_merge_ex_with_in(brazil_df, porto_alegre_udh, porto_alegre_metro_municips)
+natal_udh_merged <- udh_merge_ex_with_in(brazil_df, natal_udh, natal_metro_municips)
+maceio_udh_merged <- udh_merge_ex_with_in(brazil_df, maceio_udh, maceio_metro_municips)
+belo_horizonte_udh_merged <- udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, belo_horizonte_metro_municips)
+campinas_udh_merged <- udh_merge_ex_with_in(brazil_df, campinas_udh, campinas_metro_municips)
+curitiba_udh_merged <- udh_merge_ex_with_in(brazil_df, curitiba_udh, curitiba_metro_municips)
+belem_udh_merged <- udh_merge_ex_with_in(brazil_df, belem_udh, belem_metro_municips)
+goiania_udh_merged <- udh_merge_ex_with_in(brazil_df, goiania_udh, goiania_metro_municips)
+grande_vitoria_udh_merged <- udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, grande_vitoria_metro_municips)
+florianopolis_udh_merged <- udh_merge_ex_with_in(brazil_df, florianopolis_udh, florianopolis_metro_municips)
+manaus_udh <- udh_merge_ex_with_in(brazil_df, manaus_udh, manaus_metro_municips)
+sao_luis_udh_merged <- udh_merge_ex_with_in(brazil_df, sao_luis_udh, sao_luis_metro_municips)
+sorocaba_udh_merged <- udh_merge_ex_with_in(brazil_df, sorocaba_udh, sorocaba_metro_municips)
+baixada_santista_udh_merged <- udh_merge_ex_with_in(brazil_df, baixada_santista_udh, baixada_santista_metro_municips)
+brasilia_udh_merged <- udh_merge_ex_with_in(brazil_df, brasilia_udh, brasilia_metro_municips) 
+
+# Old merge functions (for reference)
+old_sao_paulo_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sp_udh, 'sao paulo (sp)')
+old_fortaleza_udh_merged <- old_udh_merge_ex_with_in(brazil_df, fortaleza_udh, 'fortaleza (ce)')
+old_recife_udh_merged <- old_udh_merge_ex_with_in(brazil_df, recife_udh, 'recife (pe)')
+old_rio_dj_udh_merged <- old_udh_merge_ex_with_in(brazil_df, rio_dj_udh, 'rio de janeiro (rj)')
+old_salvador_udh_merged <- old_udh_merge_ex_with_in(brazil_df, salvador_udh, 'salvador (ba)')
+old_porto_alegre_udh_merged <- old_udh_merge_ex_with_in(brazil_df, porto_alegre_udh, 'porto alegre (rs)')
+old_natal_udh_merged <- old_udh_merge_ex_with_in(brazil_df, natal_udh, 'natal (rn)')
+old_maceio_udh_merged <- old_udh_merge_ex_with_in(brazil_df, maceio_udh, 'maceio (al)')
+old_belo_horizonte_udh_merged <- old_udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, 'belo horizonte (mg)')
+old_campinas_udh_merged <- old_udh_merge_ex_with_in(brazil_df, campinas_udh, 'campinas (sp)')
+old_curitiba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, curitiba_udh, 'curitiba (pr)')
+old_belem_udh_merged <- old_udh_merge_ex_with_in(brazil_df, belem_udh, 'belem (pa)')
+old_goiania_udh_merged <- old_udh_merge_ex_with_in(brazil_df, goiania_udh, 'goiania (go)')
+old_grande_vitoria_udh_merged <- old_udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, 'vitoria (es)')
+old_florianopolis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, florianopolis_udh, 'florianopolis (sc)')
+old_manaus_udh_merged <- old_udh_merge_ex_with_in(brazil_df, manaus_udh, "manaus (am)")
+old_sao_luis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sao_luis_udh, "sao luis (ma)")
+old_sorocaba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sorocaba_udh, "sorocaba (sp)")
+old_baixada_santista_udh_merged <- old_udh_merge_ex_with_in(brazil_df, baixada_santista_udh, "santos (sp)")
+
+# Last one --> State = Distrito federal, City, Brasilia 
+
+
+
+# ----------------------- # Check stuff distances # --------------------------
+
+summary(sorocaba_udh_merged$total_distancjes) # 1 degree of distance ~ 111 km. 
+summary(old_baixada_santista_udh_merged$total_distancjes)
+table(belo_horizonte_udh_merged$customer_city)
+belo_horizonte_metro_municips
+
+
+# Attention, Brasilia has some too extreme oultiers! 
+
+
+
+
+
+# -------------------------- # merge all stuff # -----------------------------
 
 metros_1 <- rbind(sao_paulo_udh_merged, fortaleza_udh_merged)
 metros_1 <- rbind(metros_1, recife_udh_merged)
@@ -328,6 +968,11 @@ metros_1 <- rbind(metros_1, goiania_udh_merged)
 metros_1 <- rbind(metros_1, grande_vitoria_udh_merged)
 metros_1 <- rbind(metros_1, florianopolis_udh_merged)
 
+# more stuff,
+# maybe make a self-calling function
+
+
+# ----------------------------------------------------------------------------
 
 
 
@@ -342,6 +987,7 @@ hey <- glm(message_bool
            , 
            data = metros_1, family = 'binomial')
 summary(hey)
+
 vif(hey)
 
 hey_2 <- lm(log(bef_nchar) 
@@ -372,11 +1018,12 @@ vif(hey_2)
 
 # external data | municip level
 brazil_municip <- read_excel("./atlas_data/brazil_municipal.xlsx")
+brazil_municip <- column_fixer(brazil_municip, 'municip')
 
-new_data <- brazil_municip
+# new_data <- brazil_municip
 
 # Full 
-brazil_municip <- column_fixer(brazil_municip, 'municip')
+
 
 brazil_df <- brazil_df %>%
   mutate(customer_city = paste(customer_city, "(", sep = " "),
@@ -385,15 +1032,173 @@ brazil_df <- brazil_df %>%
 
 brazil_df$customer_city <- tolower(brazil_df$customer_city)
 
-merry <- merge(brazil_df,
+brazil_df <- merge(brazil_df,
                brazil_municip,
                by.x = 'customer_city',
                by.y = 'mc.Territorialidades',
                all.x = TRUE)
 
 
+filtered <- brazil_df %>%
+  filter(grepl('brasilia', customer_city))
 
 
+
+# ----------------------------------------------------------------------------
+# New stuff (experiment part) 
+
+brazil_df <- input
+sp_udh <- read.csv("./udh_queried_data/sao_paulo_udh_queried.csv")
+
+brazil_df <- brazil_df %>%
+  mutate(customer_city = paste(customer_city, "(", sep = " "),
+         customer_city = paste(customer_city, customer_state, sep = ""),
+         customer_city = paste(customer_city, ")", sep=""),
+         customer_city = tolower(customer_city)
+        )
+
+shutup <- new_udh_merge_ex_with_in(brazil_df, sp_udh, sao_paulo_metro_municips)
+
+sp_udh <- sp_udh[
+  !is.na(sp_udh$udh.lat) | !is.na(sp_udh$udh.long),]
+
+brazil_df <- brazil_df[brazil_df$customer_city %in% sao_paulo_metro_municips &
+                       !is.na(brazil_df$centroid_lat),]
+
+
+nn2 <- get.knnx(
+  sp_udh[,c("udh.lat", "udh.long")], 
+  brazil_df[,c("centroid_lat", "centroid_long")], 
+  2)
+
+brazil_df$local_index <- c(1:nrow(brazil_df)) 
+sp_udh$local_index <- c(1:nrow(sp_udh))
+
+brazil_df$index_other_data <- nn2$nn.index[,1]
+brazil_df$dist_lat <- nn2$nn.dist[,1]
+brazil_df$dist_long <- nn2$nn.dist[,2]
+brazil_df$total_distancjes <- brazil_df$dist_lat + brazil_df$dist_long
+
+married <- merge(brazil_df,
+                 sp_udh,
+                 by.x = "index_other_data",
+                 by.y = "local_index")
+
+
+# --------------------- # New function try # ---------------------------------
+
+# function that combines udh-level dataset with data from internal
+udh_merge_ex_with_in <- function(internal_data, external_data, metro_munics) {
+  
+  external_data <- external_data[
+    !is.na(external_data$udh.lat) | !is.na(external_data$udh.long),]
+  
+  internal_data <- internal_data[
+    internal_data$customer_city %in% metro_munics & !is.na(internal_data$centroid_lat),]
+  
+  nn2 <- get.knnx(
+    external_data[,c("udh.lat", "udh.long")], 
+    internal_data[,c("centroid_lat", "centroid_long")], 
+    2)
+  
+  internal_data$local_index <- c(1:nrow(internal_data)) 
+  external_data$local_index <- c(1:nrow(external_data))
+  
+  internal_data$index_other_data <- nn2$nn.index[,1]
+  internal_data$dist_lat <- nn2$nn.dist[,1]
+  internal_data$dist_long <- nn2$nn.dist[,2]
+  internal_data$total_distancjes <- internal_data$dist_lat + internal_data$dist_long
+  
+  married <- merge(internal_data,
+                   external_data,
+                   by.x = "index_other_data",
+                   by.y = "local_index")
+  return(married)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# -----------------------------------------------------------------------------
+
+
+drake <- brazil_df[
+  grepl('porto alegre', brazil_df$customer_city) == TRUE 
+  & !is.na(brazil_df$centroid_lat),]
+
+
+
+
+sao_paulo_udh_merged <- udh_merge_ex_with_in(brazil_df, sp_udh, 'sao paulo')
+
+
+# -----------------------------------------------------------------------------
+# 
+
+
+
+
+
+
+
+
+
+
+
+
+nn2 <- get.knnx(
+  sp_udh[,c("udh.lat", "udh.long")], 
+  brazil_df[,c("centroid_lat", "centroid_long")], 
+  2)
+
+brazil_df$local_index <- c(1:nrow(brazil_df)) 
+sp_udh$local_index <- c(1:nrow(sp_udh))
+
+brazil_df$index_other_data <- nn2$nn.index[,1]
+brazil_df$dist_lat <- nn2$nn.dist[,1]
+brazil_df$dist_long <- nn2$nn.dist[,2]
+brazil_df$total_distancjes <- brazil_df$dist_lat + brazil_df$dist_long
+
+married <- merge(brazil_df,
+                 sp_udh,
+                 by.x = "index_other_data",
+                 by.y = "local_index")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ----------------------------------------------------------------------------
+# 
 
 nrow(merry[is.na(merry$`IDHM 2010`),])
 
@@ -479,6 +1284,11 @@ yoyo <- glm(message_bool ~
               northeast
             , data = merry,  family='binomial')
 summary(yoyo)
+
+
+
+# Brazil df
+
 
 
 
