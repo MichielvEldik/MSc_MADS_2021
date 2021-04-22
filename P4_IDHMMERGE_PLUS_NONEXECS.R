@@ -1061,7 +1061,7 @@ vale_do_rio_cuiaba_udh_merged <- udh_merge_ex_with_in(brazil_df, vale_do_rio_cui
 vale_do_paraiba_e_litoral_norte_udh_merged <- udh_merge_ex_with_in(brazil_df, vale_do_paraiba_e_litoral_norte_udh, litoral_norte_metro_municips)
 
 
-# Old merge functions (for reference)
+# Old merge functions (for reference DONT RUN)
 old_sao_paulo_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sp_udh, 'sao paulo (sp)')
 old_fortaleza_udh_merged <- old_udh_merge_ex_with_in(brazil_df, fortaleza_udh, 'fortaleza (ce)')
 old_recife_udh_merged <- old_udh_merge_ex_with_in(brazil_df, recife_udh, 'recife (pe)')
@@ -1081,8 +1081,6 @@ old_manaus_udh_merged <- old_udh_merge_ex_with_in(brazil_df, manaus_udh, "manaus
 old_sao_luis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sao_luis_udh, "sao luis (ma)")
 old_sorocaba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sorocaba_udh, "sorocaba (sp)")
 old_baixada_santista_udh_merged <- old_udh_merge_ex_with_in(brazil_df, baixada_santista_udh, "santos (sp)")
-
-
 
 # To fix column discrepancy due to atals imports
 to_get_rid_func <- function(rid_dataset) {
@@ -1126,19 +1124,16 @@ metros_1 <- rbind(metros_1, vale_do_rio_cuiaba_udh_merged)
 metros_1 <- rbind(metros_1, vale_do_paraiba_e_litoral_norte_udh_merged)
 
 
-
-
-
-
-
-
-# Next part
-
+# current working area ---    ---   ---   ---   ---   ---   ---   ---
 brazil_municip <- read_excel("./atlas_data/brazil_municipal.xlsx")
 brazil_municip <- column_fixer(brazil_municip, 'municip')
 
 testje <- brazil_df %>%
   filter(!customer_city %in% all_udh_municips)
+
+testje_2 <- brazil_df %>%
+  filter(customer_city %in% all_udh_municips)
+
 
 
 testje <- merge(testje,
@@ -1147,8 +1142,46 @@ testje <- merge(testje,
                    by.y = 'mc.Territorialidades',
                    all.x = TRUE)
 
+nrowtestje <- nrow(testje)
+nrowtestje_2 <- nrow(testje_2)
+all_rows <- nrowtestje + nrowtestje_2
+
+# 863 lost in merge. 
+colSums(is.na(testje))
+
+non_success <- testje[is.na(testje$`mc.IDHM 2010`) == TRUE,]
+namescitys <- non_success$customer_city
+unique_namescitys <- unique(namescitys)
+tofill <- rep(0, length(unique_namescitys))
 
 
+dffort <- as.data.frame(unique_namescitys, tofill)
+write.csv(dffort, "dffort.csv")
+
+
+
+rbind(testje, metros_1)
+
+
+
+
+brazil_df[grepl('colorado', brazil_df$customer_city) == TRUE,]
+
+
+see <- brazil_municip[grepl('amparo', brazil_municip$mc.Territorialidades) == TRUE,]
+
+
+
+
+drake <- testje[
+  grepl('abrantes', testje$customer_city) == TRUE,]
+
+
+keys <- read_excel("dffort.xlsx")
+
+
+# QUESTIONS
+# ----------------------- # Why testje and metros_1 rows don't add up? # ----
 # ----------------------- # Check stuff distances # --------------------------
 
 summary(sorocaba_udh_merged$total_distancjes) # 1 degree of distance ~ 111 km. 
@@ -1203,9 +1236,11 @@ hey <- glm(message_bool
            ~ `udh.IDHM.2010` 
            + south 
            + north
+           + northeast
+           + southeast
            + udh.young_ratio
            + udh.urbanity
-           
+           + top2box
            , 
            data = metros_1, family = 'binomial')
 summary(hey)
@@ -1219,7 +1254,9 @@ hey_2 <- lm(log(bef_nchar)
             + review_sent_wknd
             + south 
             + north
-            + udh.urbanity
+            + northeast
+            + southeast
+            + log(udh.urbanity + 0.1)
             
             , 
             data = metros_1[metros_1$message_bool == 1,])
@@ -1504,7 +1541,7 @@ yoyo <- glm(message_bool ~
               south  + 
               #southeast + 
               northeast
-            , data = merry,  family='binomial')
+            , data = metros_1,  family='binomial')
 summary(yoyo)
 
 
