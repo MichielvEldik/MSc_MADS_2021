@@ -98,7 +98,7 @@ brazil_df <- brazil_df %>%
 
 
 # ----------------------------- #
-#      Product derivatives      #
+#      Product derivatives      # ---- (in progress) -----------------------
 # ----------------------------- #
 
 # Work in progress! 

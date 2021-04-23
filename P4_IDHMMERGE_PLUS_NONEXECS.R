@@ -987,13 +987,8 @@ write.csv(vale_do_rio_cuiaba_udh, "./udh_queried_data/vale_do_rio_cuiaba_udh_que
 write.csv(vale_do_paraiba_e_litoral_norte_udh, "./udh_queried_data/vale_do_paraiba_e_litoral_norte_udh_queried.csv")
 
 
-       # ----------------- #
------- # outlier detection # --------------------------------------------------
-       # ----------------- #
 
-
-
-# ------------------------- # Whole process sped up # -------------------------
+# ------------------------- # Whole process sped up # (EXECUTE)----------------
 
 # internal data
 input <- read.csv("full_geomerged_df_3.csv")
@@ -1055,7 +1050,7 @@ vale_do_rio_cuiaba_udh <- read.csv("./udh_queried_data/vale_do_rio_cuiaba_udh_qu
 vale_do_paraiba_e_litoral_norte_udh <- read.csv("./udh_queried_data/vale_do_paraiba_e_litoral_norte_udh_queried.csv")
 
 
-# New merge functions
+# New merge functions (RUN)
 sao_paulo_udh_merged <- udh_merge_ex_with_in(brazil_df, sp_udh, sao_paulo_metro_municips)
 fortaleza_udh_merged <- udh_merge_ex_with_in(brazil_df, fortaleza_udh, fortaleza_metro_municips)
 recife_udh_merged <- udh_merge_ex_with_in(brazil_df, recife_udh, recife_metro_municips)
@@ -1083,25 +1078,25 @@ vale_do_paraiba_e_litoral_norte_udh_merged <- udh_merge_ex_with_in(brazil_df, va
 
 
 # Old merge functions (for reference DONT RUN)
-old_sao_paulo_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sp_udh, 'sao paulo (sp)')
-old_fortaleza_udh_merged <- old_udh_merge_ex_with_in(brazil_df, fortaleza_udh, 'fortaleza (ce)')
-old_recife_udh_merged <- old_udh_merge_ex_with_in(brazil_df, recife_udh, 'recife (pe)')
-old_rio_dj_udh_merged <- old_udh_merge_ex_with_in(brazil_df, rio_dj_udh, 'rio de janeiro (rj)')
-old_salvador_udh_merged <- old_udh_merge_ex_with_in(brazil_df, salvador_udh, 'salvador (ba)')
-old_porto_alegre_udh_merged <- old_udh_merge_ex_with_in(brazil_df, porto_alegre_udh, 'porto alegre (rs)')
-old_natal_udh_merged <- old_udh_merge_ex_with_in(brazil_df, natal_udh, 'natal (rn)')
-old_maceio_udh_merged <- old_udh_merge_ex_with_in(brazil_df, maceio_udh, 'maceio (al)')
-old_belo_horizonte_udh_merged <- old_udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, 'belo horizonte (mg)')
-old_campinas_udh_merged <- old_udh_merge_ex_with_in(brazil_df, campinas_udh, 'campinas (sp)')
-old_curitiba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, curitiba_udh, 'curitiba (pr)')
-old_belem_udh_merged <- old_udh_merge_ex_with_in(brazil_df, belem_udh, 'belem (pa)')
-old_goiania_udh_merged <- old_udh_merge_ex_with_in(brazil_df, goiania_udh, 'goiania (go)')
-old_grande_vitoria_udh_merged <- old_udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, 'vitoria (es)')
-old_florianopolis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, florianopolis_udh, 'florianopolis (sc)')
-old_manaus_udh_merged <- old_udh_merge_ex_with_in(brazil_df, manaus_udh, "manaus (am)")
-old_sao_luis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sao_luis_udh, "sao luis (ma)")
-old_sorocaba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sorocaba_udh, "sorocaba (sp)")
-old_baixada_santista_udh_merged <- old_udh_merge_ex_with_in(brazil_df, baixada_santista_udh, "santos (sp)")
+# old_sao_paulo_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sp_udh, 'sao paulo (sp)')
+# old_fortaleza_udh_merged <- old_udh_merge_ex_with_in(brazil_df, fortaleza_udh, 'fortaleza (ce)')
+# old_recife_udh_merged <- old_udh_merge_ex_with_in(brazil_df, recife_udh, 'recife (pe)')
+# old_rio_dj_udh_merged <- old_udh_merge_ex_with_in(brazil_df, rio_dj_udh, 'rio de janeiro (rj)')
+# old_salvador_udh_merged <- old_udh_merge_ex_with_in(brazil_df, salvador_udh, 'salvador (ba)')
+# old_porto_alegre_udh_merged <- old_udh_merge_ex_with_in(brazil_df, porto_alegre_udh, 'porto alegre (rs)')
+# old_natal_udh_merged <- old_udh_merge_ex_with_in(brazil_df, natal_udh, 'natal (rn)')
+# old_maceio_udh_merged <- old_udh_merge_ex_with_in(brazil_df, maceio_udh, 'maceio (al)')
+# old_belo_horizonte_udh_merged <- old_udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, 'belo horizonte (mg)')
+# old_campinas_udh_merged <- old_udh_merge_ex_with_in(brazil_df, campinas_udh, 'campinas (sp)')
+# old_curitiba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, curitiba_udh, 'curitiba (pr)')
+# old_belem_udh_merged <- old_udh_merge_ex_with_in(brazil_df, belem_udh, 'belem (pa)')
+# old_goiania_udh_merged <- old_udh_merge_ex_with_in(brazil_df, goiania_udh, 'goiania (go)')
+# old_grande_vitoria_udh_merged <- old_udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, 'vitoria (es)')
+# old_florianopolis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, florianopolis_udh, 'florianopolis (sc)')
+# old_manaus_udh_merged <- old_udh_merge_ex_with_in(brazil_df, manaus_udh, "manaus (am)")
+# old_sao_luis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sao_luis_udh, "sao luis (ma)")
+# old_sorocaba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sorocaba_udh, "sorocaba (sp)")
+# old_baixada_santista_udh_merged <- old_udh_merge_ex_with_in(brazil_df, baixada_santista_udh, "santos (sp)")
 
 
 # To fix column discrepancy due to atals imports
@@ -1198,7 +1193,6 @@ metros_1 <- metros_1 %>%
     - index,
     - local_index,
     - X.y
-    
   ) %>%
   mutate(
     `mc.População total 2010` = NA,
@@ -1212,21 +1206,128 @@ metros_1 <- metros_1 %>%
     mc.rurality = NA,
     mc.cumul_age_24 = NA,
     mc.young_ratio = NA
+  ) %>%
+  filter(
+    total_distancjes < 2 # to deal with extreme distances
   )
 
-
+# Put together both sides of the equation
 binded_df <- rbind(metros_1, non_metros_1)
+saved_binded <- binded_df
 
-# To do list 
-  # (1) are there rows with double NAs? 
+
+# Instances with overlap? NOPE (should be zero)
+overlap <- binded_df[is.na(binded_df$mc.urbanity) == FALSE & 
+                       is.na(binded_df$udh.cumul_age_24) == FALSE,]
+
+# Take care of double NA rows.
+binded_df <- subset(binded_df, # xor works because there are no overlaps on 1
+                  xor( is.na(mc.young_ratio), 
+                       is.na(udh.long))) # implement 
+# Check if it worked (should be zero)
+both_nas <- binded_df[
+  is.na(binded_df$mc.young_ratio) == TRUE &
+    is.na(binded_df$udh.long) == TRUE,] # check
+
+
 colSums(is.na(metros_1))
-  # (2) Are there extreme distances? What to do with those...
 
-  # (3) Can we now combine it all into one column WITH dummy variable? 
+# (3) Can we now combine it all into one column WITH dummy variable? 
+binded_df <- binded_df %>%
+  # First fill with mc data
+  mutate(new_total_pop = `mc.População total 2010`,
+         new_total_rural = `mc.População rural 2010`,
+         new_total_urban = `mc.População urbana 2010`,
+         new_idhm = `mc.IDHM 2010`,
+         new_idhm_edu = `mc.IDHM Educação 2010`,
+         new_anafal_25_oumais = `mc.Taxa de analfabetismo - 25 anos ou mais de idade 2010`,
+         new_anafal_18_oumais = `mc.Taxa de analfabetismo - 18 anos ou mais de idade 2010`,
+         new_urbanity = mc.urbanity,
+         new_rurality = mc.rurality,
+         new_cumul_age_24 = mc.cumul_age_24,
+         new_young_ratio = mc.young_ratio
+  ) %>%
+  # If na, fill up with the udh data
+  mutate(
+    new_total_pop = ifelse(is.na(new_total_pop) == TRUE, udh.População.total.2010, new_total_pop),
+    new_total_rural = ifelse(is.na(new_total_rural) == TRUE, udh.População.rural.2010, new_total_rural),
+    new_total_urban = ifelse(is.na(new_total_urban) == TRUE, udh.População.urbana.2010, new_total_urban),
+    new_idhm = ifelse(is.na(new_idhm) == TRUE, udh.IDHM.2010, new_idhm),
+    new_idhm_edu = ifelse(is.na(new_idhm_edu) == TRUE, udh.IDHM.Educação.2010, new_idhm_edu),
+    new_anafal_25_oumais = ifelse(is.na(new_anafal_25_oumais) == TRUE, udh.Taxa.de.analfabetismo...25.anos.ou.mais.de.idade.2010, new_anafal_25_oumais),
+    new_anafal_18_oumais = ifelse(is.na(new_anafal_18_oumais) == TRUE, udh.Taxa.de.analfabetismo...18.anos.ou.mais.de.idade.2010, new_anafal_18_oumais),
+    new_urbanity = ifelse(is.na(new_urbanity) == TRUE, udh.urbanity, new_urbanity),
+    new_rurality = ifelse(is.na(new_rurality) == TRUE, udh.rurality, new_rurality),
+    new_cumul_age_24 = ifelse(is.na(new_cumul_age_24) == TRUE, udh.cumul_age_24, new_cumul_age_24),
+    new_young_ratio = ifelse(is.na(new_young_ratio) == TRUE, udh.young_ratio, new_young_ratio)
+        ) %>%
+  mutate(
+    udh_indicator = ifelse(is.na(udh.urbanity) == FALSE, 1, 0)
+        ) %>%
+  select(
+    - udh.População.total.2010,
+    - udh.População.rural.2010,
+    - udh.População.urbana.2010,
+    - udh.IDHM.2010,
+    - udh.IDHM.Educação.2010,
+    - udh.Taxa.de.analfabetismo...25.anos.ou.mais.de.idade.2010,
+    - udh.Taxa.de.analfabetismo...18.anos.ou.mais.de.idade.2010,
+    - udh.urbanity,
+    - udh.rurality,
+    - udh.cumul_age_24,
+    - udh.young_ratio,
+    - udh.lat,
+    - udh.long, 
+    - `mc.População total 2010`,
+    - `mc.População rural 2010`,
+    - `mc.População urbana 2010`,
+    - `mc.IDHM 2010`,
+    - `mc.IDHM Educação 2010`,
+    - `mc.Taxa de analfabetismo - 25 anos ou mais de idade 2010`,
+    - `mc.Taxa de analfabetismo - 18 anos ou mais de idade 2010`,
+    - mc.urbanity,
+    - mc.rurality,
+    - mc.cumul_age_24,
+    - mc.young_ratio
+        )
 
-  # (4) Are there unnecessary columns?
+# experii <- experii %>%
+#  mutate(udh_indicator = ifelse(is.na(udh.urbanity) == FALSE, 1, 0))
 
-  # (5) Does it all still work when run from beginning? 
+colSums(is.na(binded_df))
+
+# Fine, it's the unavailable / undelivered 
+absence_maxprice <- binded_df[is.na(binded_df$max_price) == TRUE,]
+
+
+write.csv(binded_df, 'full_geomerged_df_4.csv')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Everything below here can be moved basically. We're done!
+
+
+
+
 
 
 
