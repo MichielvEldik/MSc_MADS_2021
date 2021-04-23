@@ -1008,6 +1008,27 @@ brazil_df <- brazil_df %>%
          customer_city = iconv(customer_city, to = 'ASCII//TRANSLIT')
         )
 
+# keytjes
+keys <- read_excel("dffort.xlsx")
+keys <- keys %>%
+  drop_na() %>%
+  mutate(new_names = as.character(new_names),
+         new_names = iconv(new_names, to = 'ASCII//TRANSLIT'),
+         new_names = tolower(new_names)) %>%
+  select(- nummie)
+keys <- keys[!duplicated(keys$new_names),]
+
+brazil_df <- merge(brazil_df,
+                keys,
+                by.x = 'customer_city',
+                by.y = 'old_names',
+                all.x = TRUE)
+brazil_df <- brazil_df %>%
+  mutate(customer_city = ifelse(is.na(new_names) == TRUE, customer_city, new_names)) %>%
+  select(- new_names)
+
+
+
 sp_udh <- read.csv("./udh_queried_data/sao_paulo_udh_queried.csv")
 fortaleza_udh <- read.csv("./udh_queried_data/fortaleza_udh_queried.csv")
 recife_udh <- read.csv("./udh_queried_data/recife_udh_queried.csv")
@@ -1082,6 +1103,7 @@ old_sao_luis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sao_luis_udh, "sa
 old_sorocaba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sorocaba_udh, "sorocaba (sp)")
 old_baixada_santista_udh_merged <- old_udh_merge_ex_with_in(brazil_df, baixada_santista_udh, "santos (sp)")
 
+
 # To fix column discrepancy due to atals imports
 to_get_rid_func <- function(rid_dataset) {
   rid_dataset <- rid_dataset %>%
@@ -1123,18 +1145,168 @@ metros_1 <- rbind(metros_1, petrolina_juazeiro_udh_merged)
 metros_1 <- rbind(metros_1, vale_do_rio_cuiaba_udh_merged)
 metros_1 <- rbind(metros_1, vale_do_paraiba_e_litoral_norte_udh_merged)
 
+metro_cities <- unique(metros_1$customer_city)
 
-# current working area ---    ---   ---   ---   ---   ---   ---   ---
+
+# split, prepare and merge ------------------------------------------------------------
+non_metros_1 <- brazil_df %>%
+  filter(!customer_city %in% all_udh_municips)
+
+
 brazil_municip <- read_excel("./atlas_data/brazil_municipal.xlsx")
 brazil_municip <- column_fixer(brazil_municip, 'municip')
 
-testje <- brazil_df %>%
-  filter(!customer_city %in% all_udh_municips)
+# prepare for rbind later on
+non_metros_1 <- non_metros_1 %>%
+  select(- index, - X) %>%
+  mutate(
+    dist_lat = NA,
+    dist_long = NA,
+    total_distancjes = NA,
+    udh.Territorialidades = NA,
+    udh.População.total.2010 = NA,
+    udh.População.rural.2010 = NA,
+    udh.População.urbana.2010 = NA,
+    udh.IDHM.2010 = NA,
+    udh.IDHM.Educação.2010 = NA,
+    udh.Taxa.de.analfabetismo...25.anos.ou.mais.de.idade.2010 = NA,
+    udh.Taxa.de.analfabetismo...18.anos.ou.mais.de.idade.2010 = NA,
+    udh.urbanity = NA,
+    udh.rurality = NA,
+    udh.cumul_age_24 = NA,
+    udh.young_ratio = NA,
+    udh.lat = NA,
+    udh.long = NA
+  )
 
-testje_2 <- brazil_df %>%
-  filter(customer_city %in% all_udh_municips)
+
+non_metros_1 <- merge(non_metros_1,
+                brazil_municip,
+                by.x = 'customer_city',
+                by.y = 'mc.Territorialidades',
+                all.x = TRUE)
 
 
+
+
+colSums(is.na(non_metros_1)) # only 149 NA whereas it was 876
+
+metros_1 <- metros_1 %>%
+  select(
+    - index_other_data,
+    - X.x,
+    - index,
+    - local_index,
+    - X.y
+    
+  ) %>%
+  mutate(
+    `mc.População total 2010` = NA,
+    `mc.População rural 2010` = NA,
+    `mc.População urbana 2010` = NA,
+    `mc.IDHM 2010` = NA,
+    `mc.IDHM Educação 2010` = NA,
+    `mc.Taxa de analfabetismo - 25 anos ou mais de idade 2010` = NA,
+    `mc.Taxa de analfabetismo - 18 anos ou mais de idade 2010` = NA,
+    mc.urbanity = NA,
+    mc.rurality = NA,
+    mc.cumul_age_24 = NA,
+    mc.young_ratio = NA
+  )
+
+
+binded_df <- rbind(metros_1, non_metros_1)
+
+# To do list 
+  # (1) are there rows with double NAs? 
+colSums(is.na(metros_1))
+  # (2) Are there extreme distances? What to do with those...
+
+  # (3) Can we now combine it all into one column WITH dummy variable? 
+
+  # (4) Are there unnecessary columns?
+
+  # (5) Does it all still work when run from beginning? 
+
+
+
+
+
+
+# put metro and non_metro back together --------------------------------------
+
+# cols should be the same for merge so check it out. 
+colnames_nonmetros_1 <- colnames(non_metros_1)
+colnames_metros_1 <- colnames(metros_1)
+
+nrow(metros_1) + nrow(non_metros_1) # 95736 is a few thousand loss but fine. 
+
+
+# Which cols are in metros that aren't in non_metros?
+for (i in colnames_metros_1) {
+  if (!i %in% colnames_nonmetros_1){
+    print(i)
+  }
+  
+}
+
+# Step 1, clean up both dataframes:
+
+non_metros_1 <- non_metros_1 %>%
+  select(- index, - X)
+
+metros_1 <- metros_1 %>%
+  select(
+    - index_other_data,
+    - X.x,
+    - index,
+    - local_index,
+    - X.y
+    
+  )
+
+metros_1 <- metros_1 %>%
+  select(
+    
+    
+    - X.y
+  )
+
+non_metros_1 <- non_metros_1 %>%
+  mutate(
+    dist_lat = NA,
+    dist_long = NA,
+    total_distancjes = NA,
+    udh.Territorialidades = NA
+    
+  )
+
+
+
+
+
+
+
+
+
+# keytjes
+keys <- read_excel("dffort.xlsx")
+keys <- keys %>%
+  drop_na() %>%
+  mutate(new_names = as.character(new_names),
+         new_names = iconv(new_names, to = 'ASCII//TRANSLIT'),
+         new_names = tolower(new_names)) %>%
+  select(- nummie)
+keys <- keys[!duplicated(keys$new_names),]
+
+testje <- merge(testje,
+                keys,
+                by.x = 'customer_city',
+                by.y = 'old_names',
+                all.x = TRUE)
+
+testje <- testje %>%
+  mutate(customer_city = ifelse(is.na(new_names) == TRUE, customer_city, new_names))
 
 testje <- merge(testje,
                    brazil_municip,
@@ -1142,42 +1314,43 @@ testje <- merge(testje,
                    by.y = 'mc.Territorialidades',
                    all.x = TRUE)
 
+
+
+
+non_metros <- brazil_df %>%
+  filter(!customer_city %in% metro_cities)
+
+metros_2 <- brazil_df %>%
+  filter(customer_city %in% metro_cities)
+
+nrow(metros_1) + nrow(non_metros)
+
+
 nrowtestje <- nrow(testje)
 nrowtestje_2 <- nrow(testje_2)
 all_rows <- nrowtestje + nrowtestje_2
+what_rows <- nrowtestje + nrow(metros_1)
 
-# 863 lost in merge. 
-colSums(is.na(testje))
+# ----- [] DON'T RUN ]----------------- [ OLD CODE TO GET KEYS to EXCEL] ------
+testje <- brazil_df %>%
+  filter(!customer_city %in% all_udh_municips)
+
+testje <- merge(testje,
+                brazil_municip,
+                by.x = 'customer_city',
+                by.y = 'mc.Territorialidades',
+                all.x = TRUE)
 
 non_success <- testje[is.na(testje$`mc.IDHM 2010`) == TRUE,]
 namescitys <- non_success$customer_city
 unique_namescitys <- unique(namescitys)
 tofill <- rep(0, length(unique_namescitys))
-
-
 dffort <- as.data.frame(unique_namescitys, tofill)
 write.csv(dffort, "dffort.csv")
 
+# -----------------------------------------------------------------------------
 
 
-rbind(testje, metros_1)
-
-
-
-
-brazil_df[grepl('colorado', brazil_df$customer_city) == TRUE,]
-
-
-see <- brazil_municip[grepl('amparo', brazil_municip$mc.Territorialidades) == TRUE,]
-
-
-
-
-drake <- testje[
-  grepl('abrantes', testje$customer_city) == TRUE,]
-
-
-keys <- read_excel("dffort.xlsx")
 
 
 # QUESTIONS
@@ -1465,7 +1638,7 @@ nrow(merry[is.na(merry$`IDHM 2010`),])
 merry_nas <- merry[is.na(merry$`mc.IDHM 2010`),]
 
 
-colSums(is.na(brazil_df))
+colSums(is.na(metros_1))
 
 
 
