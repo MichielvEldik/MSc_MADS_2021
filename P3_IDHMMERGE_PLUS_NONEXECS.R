@@ -1274,8 +1274,6 @@ binded_df <- binded_df %>%
     - udh.rurality,
     - udh.cumul_age_24,
     - udh.young_ratio,
-    - udh.lat,
-    - udh.long, 
     - `mc.População total 2010`,
     - `mc.População rural 2010`,
     - `mc.População urbana 2010`,
@@ -1298,7 +1296,7 @@ colSums(is.na(binded_df))
 absence_maxprice <- binded_df[is.na(binded_df$max_price) == TRUE,]
 
 
-write.csv(binded_df, 'full_geomerged_df_4_.csv')
+write.csv(binded_df, 'full_geomerged_df_4_new.csv')
 
 
 

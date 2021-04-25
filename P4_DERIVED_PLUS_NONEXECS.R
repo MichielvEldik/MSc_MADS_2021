@@ -8,7 +8,7 @@ library(lubridate)
 library(dplyr)
 
 
-input <- read.csv("full_geomerged_df_4.csv")
+input <- read.csv("full_geomerged_df_4_new.csv")
 brazil_df <- input
 
 # ------ #
@@ -28,10 +28,6 @@ brazil_df <- brazil_df %>%
   mutate(new_total_rural = ifelse(is.na(new_total_rural), 0, new_total_rural))
 
 colSums(is.na(brazil_df))
-
-#
-# 
-# 
 
 
 # --------- #
@@ -91,33 +87,30 @@ brazil_df<- brazil_df %>%
 # Message and title derivatives # ---------------------------------------------
 # ----------------------------- #
 
-
-# Create dummy for message vs no message
+# Create dummy for message vs no message [BASED ON AFTER LEMMA]
 brazil_df <- brazil_df %>%
-  mutate(review_comment_message = as.character(review_comment_message)) %>%
-  mutate(message_length = nchar(review_comment_message)) %>%
-  mutate(message_bool = ifelse(message_length == 0, 0, 1)) %>%
-  mutate(message_bool = as.integer(message_bool))
-
-
+  mutate(review_comment_message = as.character(review_comment_message),
+         message_length = nchar(review_comment_message),
+         message_bool = ifelse(is.na(review_comment_message), 0, 1)
+        )
+  
+# Create dummy for message vs no message [BASED ON BEFORE LEMMA]
 brazil_df <- brazil_df %>%
-  mutate()
-
-
-brazil_df <- brazil_df %>%
-  mutate(message_bool = ifelse(is.na(message_bool) == TRUE, 0, message_bool))
+  mutate(bef_message_bool = ifelse(bef_nchar == 0, 0, 1))
 
 # Create a dummy variable for title message
 brazil_df <- brazil_df %>%
-  mutate(review_comment_title = as.character(review_comment_title)) %>%
-  mutate(title_length = nchar(review_comment_title)) %>%
-  mutate(title_bool = ifelse(title_length == 0, 0, 1)) %>%
-  mutate(title_bool = as.integer(title_bool))
+  mutate(review_comment_title = as.character(review_comment_title),
+         title_length = nchar(review_comment_title),
+         title_bool = ifelse(is.na(review_comment_title), 0, 1)
+        )
 
 # Create a dummy variable for title OR, AND message
 brazil_df <- brazil_df %>%
-  mutate(title_or_message = ifelse(message_bool == 1 | title_bool == 1, 1, 0)) %>%
-  mutate(title_and_message = ifelse(message_bool == 1 & title_bool == 1, 1, 0))
+  mutate(title_or_message = ifelse(message_bool == 1 | title_bool == 1, 1, 0),
+         title_and_message = ifelse(message_bool == 1 & title_bool == 1, 1, 0),
+         title_nor_message = ifelse(message_bool == 0 & title_bool == 0, 1, 0)
+        )
 
 # Top2box transformation
 brazil_df <- brazil_df %>%
@@ -131,8 +124,8 @@ brazil_df <- brazil_df %>%
 # Work in progress! 
 table(brazil_df$product_category_name)
 
-
-
+prop.table(table(brazil_df$product_category_name,
+                 brazil_df$bef_message_bool), margin = 1)
 
 
 # Taxonomy Donal Vitaliano, 2007
@@ -140,17 +133,61 @@ search_goods <- c("furniture_bedroom",
                   "furniture_living_room",
                   "furniture_bedroom",
                   "office_furniture",
-                  
-                  )
+                  "kitchen_dining_laundry_garden_furniture ",
+                  "music",
+                  "pet_shop",
+                  "housewares",
+                  "books_technical",
+                  "books_general_interest"
+                 )
+
 experience_goods <- c("auto",
                       "food",
                       "food_drink",
                       "home_appliances",
                       "home_appliances_2",
-                      )
+                      "fashio_female_clothing",
+                      "fashion_male_clothing",
+                      "security_and_services",
+                      "telephony",
+                      "la cuisine",
+                      "arts_and_craftmanship",
+                      "fashion_shoes",
+                      "party_supplies",
+                      " "
+                      
+                     )
 
 credence_goods <- c("health_beauty",
-                    "")
+                    "diapers_and_hygiene",
+                    " "
+                   )
+
+not_sure <- c(" ",
+              " ",
+              " ",
+              " ",
+              " ",
+              " ")
+
+intimate <- c("baby",
+              "perfumery",
+              "diapers_and_hygiene",
+              "health_beauty")
+
+
+
+brazil_df <- brazil_df %>%
+  mutate(search_goods = ifelse(product_category_name %in% search_goods, 1, 0),
+         experience_goods = ifelse(product_category_name %in% experience_goods, 1, 0),
+         intimate_goods = ifelse(product_category_name %in% intimate, 1, 0)
+        )
+
+test <- brazil_df %>%
+  select(product_category_name,
+         search_goods,
+         experience_goods,
+         intimate_goods)
 
 
 product_cats <- brazil_df %>%
@@ -160,6 +197,7 @@ product_cats <- brazil_df %>%
             mean_price = mean(max_price),
             spread_sd = sd(max_price),
             char_length = mean(bef_nchar)) # this is wrong, as it takes into asccount many zeros
+
 
 
 # ----------------- #
@@ -190,11 +228,47 @@ brazil_df <- brazil_df %>%
 # Distinguish freight-related messages # ------------------------------------- # 
 # ------------------------------------ #
 
+# Due to lemmatization we don't need to worry about tenses or 
 
+listje <- c("receb", # received
+            "aguar", # wait 
+            "ainda", # yet 
+            "faltou", # missed
+            "faltar", # missed 
+            "incompleto", # incomplete 
+            "nunca chegar", # never came / arrived
+            "chegar", # To arrive
+            "entregar", # deliver 
+            "nao entregar", # not delivered 
+            "antar do prazo", # before the term / deadline
+            "prazo" # term / deadline
+           )
+
+brazil_df$freight_issue_bool <- 0
+
+for (i in listje){
+  brazil_df$freight_issue_bool <- ifelse(
+    grepl(i, brazil_df$message_and_title), 
+    1, 
+    brazil_df$freight_issue_bool)
+}
+
+test_out <- brazil_df[
+  brazil_df$freight_issue_bool == 1, 
+  c("review_comment_message",
+    "freight_issue_bool",
+    "review_score"
+    )]
 
 # ----------------- #
 # customer history  # 
 # ----------------- #
+
+# if customer in data apart from here, then look through all things
+# if date of thing close to current date
+# add difference/. 
+
+
 
 # Work in progress
 
@@ -202,7 +276,7 @@ brazil_df <- brazil_df %>%
 # Write file #
 # ---------- #
 
-write.csv(brazil_df, "full_geomerged_df_3.csv")
+write.csv(brazil_df, "full_geomerged_df_5.csv")
 
 
 
