@@ -8,8 +8,30 @@ library(lubridate)
 library(dplyr)
 
 
-input <- read.csv("full_geomerged_df_3.csv")
+input <- read.csv("full_geomerged_df_4.csv")
 brazil_df <- input
+
+# ------ #
+# Rename # ------------------------------------------------------------------- #
+# ------ #
+
+brazil_df <- brazil_df %>%
+  rename(bef_nchar_perword = nchar_perword)
+
+
+# ---------- #
+# na to zero # --------------------------------------------------------------- #
+# ---------- #
+
+
+brazil_df <- brazil_df %>%
+  mutate(new_total_rural = ifelse(is.na(new_total_rural), 0, new_total_rural))
+
+colSums(is.na(brazil_df))
+
+#
+# 
+# 
 
 
 # --------- #
@@ -76,6 +98,11 @@ brazil_df <- brazil_df %>%
   mutate(message_length = nchar(review_comment_message)) %>%
   mutate(message_bool = ifelse(message_length == 0, 0, 1)) %>%
   mutate(message_bool = as.integer(message_bool))
+
+
+brazil_df <- brazil_df %>%
+  mutate()
+
 
 brazil_df <- brazil_df %>%
   mutate(message_bool = ifelse(is.na(message_bool) == TRUE, 0, message_bool))
