@@ -994,7 +994,7 @@ write.csv(vale_do_paraiba_e_litoral_norte_udh, "./udh_queried_data/vale_do_parai
 # ------------------------- # Whole process sped up # (EXECUTE)----------------
 
 # internal data
-input <- read.csv("full_geomerged_df_3.csv")
+input <- read.csv("full_geomerged_df_2.csv")
 brazil_df <- input
 brazil_df <- brazil_df %>%
   mutate(customer_city = paste(customer_city, "(", sep = " "),
@@ -1156,7 +1156,7 @@ brazil_municip <- column_fixer(brazil_municip, 'municip')
 
 # prepare for rbind later on
 non_metros_1 <- non_metros_1 %>%
-  select(- index, - X) %>%
+  select(- index) %>%
   mutate(
     dist_lat = NA,
     dist_long = NA,
@@ -1192,10 +1192,9 @@ colSums(is.na(non_metros_1)) # only 149 NA whereas it was 876
 metros_1 <- metros_1 %>%
   select(
     - index_other_data,
-    - X.x,
+    - X,
     - index,
-    - local_index,
-    - X.y
+    - local_index
   ) %>%
   mutate(
     `mc.População total 2010` = NA,
@@ -1303,7 +1302,7 @@ colSums(is.na(binded_df))
 absence_maxprice <- binded_df[is.na(binded_df$max_price) == TRUE,]
 
 
-write.csv(binded_df, 'full_geomerged_df_4.csv')
+write.csv(binded_df, 'full_geomerged_df_3.csv')
 
 
 
