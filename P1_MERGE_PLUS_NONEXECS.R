@@ -12,20 +12,20 @@ library(dplyr)
 
 
 
-customers_df <- read.csv('./olist_data/olist_customers_dataset.csv')
-reviews_df <- read.csv('./olist_data/olist_order_reviews_dataset.csv')
-items_df <- read.csv('./olist_data/olist_order_items_dataset.csv')
-products_df <- read.csv('./olist_data/olist_products_dataset.csv')
-orders_df <- read.csv('./olist_data/olist_orders_dataset.csv')
-sellers_df <- read.csv('./olist_data/olist_sellers_dataset.csv')
-geo_df <- read.csv('./olist_data/olist_geolocation_dataset.csv')
-translate_df <- read.csv('./olist_data/product_category_name_translation.csv')
-payment_df <- read.csv('./olist_data/olist_order_payments_dataset.csv')
+customers_df <- read.csv("./olist_data/olist_customers_dataset.csv")
+reviews_df <- read.csv("./olist_data/olist_order_reviews_dataset.csv")
+items_df <- read.csv("./olist_data/olist_order_items_dataset.csv")
+products_df <- read.csv("./olist_data/olist_products_dataset.csv")
+orders_df <- read.csv("./olist_data/olist_orders_dataset.csv")
+sellers_df <- read.csv("./olist_data/olist_sellers_dataset.csv")
+geo_df <- read.csv("./olist_data/olist_geolocation_dataset.csv")
+translate_df <- read.csv("./olist_data/product_category_name_translation.csv")
+payment_df <- read.csv("./olist_data/olist_order_payments_dataset.csv")
 
 translated_products_df <- merge(products_df, 
                                 translate_df, 
-                                by.x = 'product_category_name', 
-                                by.y = 'product_category_name', 
+                                by.x = "product_category_name", 
+                                by.y = "product_category_name", 
                                 all.x = TRUE)
 
 translated_products_df$product_category_name <- translated_products_df$product_category_name_english
@@ -41,19 +41,19 @@ translated_products_df <- translated_products_df[,1:9]
 
 reviews_plus_orders_df <- merge(reviews_df, 
                                 orders_df, 
-                                by.x = 'order_id', 
-                                by.y = 'order_id')
+                                by.x = "order_id", 
+                                by.y = "order_id")
 
 revord_plus_items_df <- merge(reviews_plus_orders_df,
                               items_df,
-                              by.x = 'order_id', 
-                              by.y = 'order_id',
+                              by.x = "order_id", 
+                              by.y = "order_id",
                               all.x = TRUE)
 
 semi_df <- merge(revord_plus_items_df, 
                  translated_products_df, 
-                 by.x = 'product_id', 
-                 by.y = 'product_id', 
+                 by.x = "product_id", 
+                 by.y = "product_id", 
                  all.x = TRUE)
 
 multiples_cases_rev_df <- reviews_df %>%
@@ -65,7 +65,7 @@ culprit_vector <- unique(multiples_cases_rev_df$review_id)
 
 counter <- 0
 
-# To fill with the order_ids corresponding to highest price per 'culprit'
+# To fill with the order_ids corresponding to highest price per "culprit"
 table = data.frame()
 
 for (i in semi_df$review_id) {
@@ -87,16 +87,16 @@ write.csv(optimal_orders,"dictionary_optimal_orders.csv", row.names = FALSE)
 #     EXECUTABLE PART    #
 # ---------------------- #
 
-# highest priced order_ids per 'culprit' review_id
-optimal_orders <- read.csv('dictionary_optimal_orders.csv')
+# highest priced order_ids per "culprit" review_id
+optimal_orders <- read.csv("dictionary_optimal_orders.csv")
 
 merger_reviews_df <- merge(reviews_df,
                            optimal_orders,
-                           by.x = 'review_id',
-                           by.y = 'review_id',
+                           by.x = "review_id",
+                           by.y = "review_id",
                            all.x = TRUE)
 
-# separate the 'culprits' from the non-'culprits'
+# separate the "culprits" from the non-"culprits"
 subbie_2 <- merger_reviews_df[!is.na(merger_reviews_df$order_id.y),] 
 subbie <- merger_reviews_df[is.na(merger_reviews_df$order_id.y),]
 
@@ -120,8 +120,8 @@ nrow(happy_days)
 # full merge
 reviews_orders <- merge(happy_days, 
                         orders_df, 
-                        by.x = 'order_id.y', 
-                        by.y = 'order_id',
+                        by.x = "order_id.y", 
+                        by.y = "order_id",
                         all.x = TRUE)
 
 # Does it still make sense?
@@ -136,8 +136,8 @@ length(unique(reviews_orders$review_id)) #99173
 
 roi_df <- merge(reviews_orders,
                 items_df,
-                by.x = 'order_id.y', 
-                by.y = 'order_id',
+                by.x = "order_id.y", 
+                by.y = "order_id",
                 all.x = TRUE)
 
 # Get aggregate data 
@@ -191,18 +191,18 @@ write.csv(table_2,"dictionary_optimal_productids.csv", row.names = FALSE)
 # ------------------------ #
 
 # Highest priced product within a multi-item order review
-table_2 <- read.csv('dictionary_optimal_productids.csv')
+table_2 <- read.csv("dictionary_optimal_productids.csv")
 
 merger <- merge(roi_df_2,
                 table_2,
-                by.x = 'review_id',
-                by.y = 'review_id',
+                by.x = "review_id",
+                by.y = "review_id",
                 all.x = TRUE)
 
 nick <- merger[is.na(merger$product_id.y),] 
 simon <-merger[! is.na(merger$product_id.y),]
 
-# This makes 1 column with all product_ids, including replacements we've found
+# This makes 1 column with all product_ids, including replacements we"ve found
 nick$product_id.y <- nick$product_id.x
 nick_simon <- rbind(nick, simon)
 
@@ -221,8 +221,8 @@ nrow(bicep) -length(unique(bicep$review_id)) # should be zero, is 1349 :(
 # To resolve, we need customer data, hence merge.
 bicep_df <- merge(bicep,
                   customers_df,
-                  by.x = 'customer_id', 
-                  by.y = 'customer_id', 
+                  by.x = "customer_id", 
+                  by.y = "customer_id", 
                   all.x = TRUE)
 
 # Remove columns that cause variation problems in unique() func.
@@ -250,8 +250,8 @@ bicep_df_dups <- bicep_df %>%
 
 bicep_df <- merge(bicep_df, 
                   translated_products_df,
-                  by.x = 'product_id.y', 
-                  by.y = 'product_id', 
+                  by.x = "product_id.y", 
+                  by.y = "product_id", 
                   all.x = TRUE) 
 
 # Sanity check
@@ -273,8 +273,8 @@ centroid_and_merge_function <- function(name_of_state){
   # merge centroid coordinate with zip code prefix
   geo_rev_STATE_df <- merge(x_STATE_rev_df,
                             centroids_x_STATE_geo_df,
-                            by.x = 'customer_zip_code_prefix',
-                            by.y = 'geolocation_zip_code_prefix',
+                            by.x = "customer_zip_code_prefix",
+                            by.y = "geolocation_zip_code_prefix",
                             all.x = TRUE)
   return(geo_rev_STATE_df)
 }

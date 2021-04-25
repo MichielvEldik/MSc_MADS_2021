@@ -115,19 +115,19 @@ merg_func <- function(brazil_df, df, type){
     select(-X)
   
   brazil_df <- merge(brazil_df, df, 
-                     by.x = 'index',
-                     by.y = 'index',
+                     by.x = "index",
+                     by.y = "index",
                      all.x = TRUE)
   
   return(brazil_df)
 }
 
 # Load data from "Spacen met Spacy.ipynb"
-lemmatized_message <- read.csv('lemmatized_message.csv')
-lemmatized_title <- read.csv('lemmatized_title.csv')
+lemmatized_message <- read.csv("lemmatized_message.csv")
+lemmatized_title <- read.csv("lemmatized_title.csv")
 
-brazil_df <- merg_func(brazil_df, lemmatized_title, 'title')
-brazil_df <- merg_func(brazil_df, lemmatized_message, 'message')
+brazil_df <- merg_func(brazil_df, lemmatized_title, "title")
+brazil_df <- merg_func(brazil_df, lemmatized_message, "message")
 
 brazil_df <- brazil_df %>%
   mutate(review_comment_title = as.character(title),
@@ -180,31 +180,31 @@ new_text_df <- new_text_df %>%
 
 # Words like "adoreiiiiiiiiiiii"
 weird_words <- new_text_df %>%
-  filter(grepl('([a-z\\d])\\1\\1', word))
+  filter(grepl("([a-z\\d])\\1\\1", word))
 # add to dic
 dic <- c(dic, weird_words$word)
 # Moving forward, we can filter these out of the tidy df
 new_text_df <- new_text_df %>%
-  filter(!grepl('([a-z\\d])\\1\\1', word))
+  filter(!grepl("([a-z\\d])\\1\\1", word))
 
 # Words with no vowels
 no_vowels <- new_text_df %>%
-  filter(!grepl('[aeiou]+', word))
+  filter(!grepl("[aeiou]+", word))
 # add to dic
 dic <- c(dic, no_vowels$word)
 # Moving forward, we can filter these out of the tidy df
 new_text_df <- new_text_df %>%
-  filter(grepl('[aeiou]+', word))
+  filter(grepl("[aeiou]+", word))
 
 
 # Words with only vowels
 on_vowels <- new_text_df %>%
-  filter(!grepl('[^aeiou]+', word))
+  filter(!grepl("[^aeiou]+", word))
 # add to dic
 dic <- c(dic, on_vowels$word)
 # Moving forward, we can filter these out of the tidy df
 new_text_df <- new_text_df %>%
-  filter(grepl('[^aeiou]+', word))
+  filter(grepl("[^aeiou]+", word))
 
 
 # external stopwords document
@@ -214,7 +214,7 @@ port_stopwords <- port_stopwords %>%
   mutate(V1 = iconv(V1, to = "ASCII//TRANSLIT"))
 # Keep nao
 port_stopwords <- port_stopwords %>%
-  filter(!grepl('nao', V1))
+  filter(!grepl("nao", V1))
 # add to dic
 dic <- c(dic, port_stopwords$V1)
 
@@ -275,7 +275,7 @@ brazil_df <- brazil_df %>%
       is.na(review_comment_message) == FALSE & is.na(review_comment_title) == TRUE,
       review_comment_message, message_and_title
                               ),
-    message_and_title = ifelse(message_and_title == '0', NA, message_and_title
+    message_and_title = ifelse(message_and_title == "0", NA, message_and_title
                               )
         )
 

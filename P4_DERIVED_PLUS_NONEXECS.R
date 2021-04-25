@@ -52,16 +52,16 @@ brazil_df <- brazil_df %>%
     review_answer_dow = wday(review_answer_timestamp, label = TRUE),
     # Dummy variable weekend yes/no
     review_sent_wknd = ifelse(
-      review_sent_dow == 'zo' | review_sent_dow == 'za', 1, 0),
+      review_sent_dow == "zo" | review_sent_dow == "za", 1, 0),
     review_answer_wknd = ifelse(
-      review_answer_dow == 'zo' | review_answer_dow == 'za', 1, 0)
+      review_answer_dow == "zo" | review_answer_dow == "za", 1, 0)
         )
 
 brazil_df<- brazil_df %>%
   mutate(
-    y_2016 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0),
-    y_2017 = ifelse(year(order_purchase_timestamp) == '2017', 1, 0),
-    y_2018 = ifelse(year(order_purchase_timestamp) == '2016', 1, 0)
+    y_2016 = ifelse(year(order_purchase_timestamp) == "2016", 1, 0),
+    y_2017 = ifelse(year(order_purchase_timestamp) == "2017", 1, 0),
+    y_2018 = ifelse(year(order_purchase_timestamp) == "2016", 1, 0)
         )
 
 
