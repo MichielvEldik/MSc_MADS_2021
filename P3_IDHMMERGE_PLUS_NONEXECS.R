@@ -172,9 +172,7 @@ udh_merge_ex_with_in <- function(internal_data, external_data, metro_munics) {
   external_data$local_index <- c(1:nrow(external_data))
   
   internal_data$index_other_data <- nn2$nn.index[,1]
-  internal_data$dist_lat <- nn2$nn.dist[,1]
-  internal_data$dist_long <- nn2$nn.dist[,2]
-  internal_data$total_distancjes <- internal_data$dist_lat + internal_data$dist_long
+  internal_data$dist <- nn2$nn.dist[,1]
   
   married <- merge(internal_data,
                    external_data,
@@ -1158,9 +1156,7 @@ brazil_municip <- column_fixer(brazil_municip, "municip")
 non_metros_1 <- non_metros_1 %>%
   select(- index) %>%
   mutate(
-    dist_lat = NA,
-    dist_long = NA,
-    total_distancjes = NA,
+    dist = NA,
     udh.Territorialidades = NA,
     udh.População.total.2010 = NA,
     udh.População.rural.2010 = NA,
@@ -1210,7 +1206,7 @@ metros_1 <- metros_1 %>%
     mc.young_ratio = NA
   ) %>%
   filter(
-    total_distancjes < 2 # to deal with extreme distances
+    dist < 2 # to deal with extreme distances
   )
 
 # Put together both sides of the equation
@@ -1302,7 +1298,7 @@ colSums(is.na(binded_df))
 absence_maxprice <- binded_df[is.na(binded_df$max_price) == TRUE,]
 
 
-write.csv(binded_df, 'full_geomerged_df_4.csv')
+write.csv(binded_df, 'full_geomerged_df_4_.csv')
 
 
 
