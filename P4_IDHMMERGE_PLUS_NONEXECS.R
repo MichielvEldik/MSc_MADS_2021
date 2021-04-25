@@ -1,8 +1,12 @@
 # USED files:
 #            full_geomerged_df_3.csv (from part 2: from derived)
 #            data (3).xlsx (from Atlas.bi)
+#            atlas_data (udh level input + full municip)
+#            udh_queried_data
+#            dffort.xlsx
 # 
 # WRITE files:
+#            udh_queried_data
 #            full_geomerged_df_4.csv (for part 5)
 
 
@@ -881,7 +885,6 @@ all_udh_municips <- append(all_udh_municips, vale_do_rio_cuiaba_metro_municips)
 # ---------------------------------------------- #
 
 # external data | udh (neighborhood) level, by metrpopolitan region
-# Southeast 
 sp_udh <- read_excel("./atlas_data/sao_paulo_udh.xlsx")
 fortaleza_udh <- read_excel("./atlas_data/fortaleza_udh.xlsx")
 recife_udh <- read_excel("./atlas_data/recife_udh.xlsx")
@@ -1143,7 +1146,7 @@ metros_1 <- rbind(metros_1, vale_do_paraiba_e_litoral_norte_udh_merged)
 metro_cities <- unique(metros_1$customer_city)
 
 
-# split, prepare and merge ------------------------------------------------------------
+# split, prepare and merge (EXECUTE) ------------------------------------------
 non_metros_1 <- brazil_df %>%
   filter(!customer_city %in% all_udh_municips)
 

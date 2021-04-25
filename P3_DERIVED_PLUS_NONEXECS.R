@@ -13,7 +13,7 @@ brazil_df <- input
 
 
 # --------- #
-# Date data #
+# Date data # ---------------------------------------------------------------- #
 # --------- #
 
 # To date format
@@ -66,7 +66,7 @@ brazil_df<- brazil_df %>%
 
 
 # ----------------------------- #
-# Message and title derivatives #
+# Message and title derivatives # ---------------------------------------------
 # ----------------------------- #
 
 
@@ -98,7 +98,7 @@ brazil_df <- brazil_df %>%
 
 
 # ----------------------------- #
-#      Product derivatives      # ---- (in progress) -----------------------
+#      Product derivatives      # ---- (in progress) ------------------------- #
 # ----------------------------- #
 
 # Work in progress! 
@@ -136,7 +136,7 @@ product_cats <- brazil_df %>%
 
 
 # ----------------- #
-# Regions variables #
+# Regions variables # -------------------------------------------------------- #
 # ----------------- #
 
 c_north <- c("AC","AP","AM","PA", "RO", "RR", "TO")
@@ -159,8 +159,14 @@ brazil_df <- brazil_df %>%
          centerwest = ifelse(customer_state %in% c_centerwest, 1,0),
         )
 
+# ------------------------------------ #
+# Distinguish freight-related messages # ------------------------------------- # 
+# ------------------------------------ #
+
+
+
 # ----------------- #
-# customer history  #
+# customer history  # 
 # ----------------- #
 
 # Work in progress
