@@ -1,9 +1,28 @@
 library(car)
+library(dplyr)
 # Hello, world
 input <- read.csv("full_geomerged_df_5.csv")
 brazil_df <- input
 
+cols <- c("bef_message_bool",
+          "hdi_class",
+          "max_price_disc",
+          "item_count_disc",
+          "urbanity_disc",
+          "freight_issue_bool",
+          "north",
+          "northeast",
+          "centerwest",
+          "south",
+          "southeast",
+          "y_2016",
+          "y_2017",
+          "y_2018",
+          "top2box",
+          "experience_goods",
+          "search_goods")
 
+brazil_df[,cols] <- lapply(brazil_df[cols], function(x) as.factor(x))
 
 
 
@@ -44,4 +63,54 @@ summary(glm(freight_issue_bool ~ new_idhm,
             family = binomial(link = "logit")))
 
 
-(udh_indicator is maybe a good swap for urbanity)
+
+hey_2 <- glm(bef_message_bool 
+           ~ hdi_class
+           + urbanity_disc
+           + freight_issue_bool
+           + top2box
+           + north
+           + northeast 
+           + south
+           + southeast
+           , 
+           data = brazil_df, 
+           family = binomial(link = "logit")
+)
+summary(hey_2)
+
+
+
+
+# ----- [hybrid bayes nets with HydeNet] ------------------------------------- #
+# https://cran.r-project.org/web/packages/HydeNet/vignettes/GettingStartedWithHydeNet.html
+library(coda)
+library(rjags)
+library(BiocManager)
+library(graph)
+library(HydeNet)
+
+# transform into factors
+mtcars2 <- transform(mtcars,
+                     cyl = factor(cyl),
+                     gear=factor(gear),
+                     am = factor(am))
+
+# Network Construction
+carNet <- HydeNetwork(~ cyl
+                      + disp | cyl
+                      + hp | disp
+                      + wt
+                      + gear
+                      + mpg | disp*hp*wt*gear,
+                      data=mtcars2)
+# Visualization
+plot(carNet)
+
+# ----- [ normal bayes net with bnlearn] ------------------------------------- #
+# https://www.r-bloggers.com/2018/09/bayesian-network-example-with-the-bnlearn-package/
+library(bnlearn)
+library(qgraph)
+
+
+

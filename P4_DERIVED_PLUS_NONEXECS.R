@@ -272,6 +272,105 @@ test_out <- brazil_df[
 
 # Work in progress
 
+
+
+
+# -------------- #
+# Discretization # ----------------------------------------------------------- #
+# -------------- #
+
+# ---------------------------------------------------------------------------- #
+# Beuzen, T., Marshall, L., & Splinter, K. D. (2018). 
+# A comparison of methods for discretizing continuous variables in Bayesian Networks. 
+# Environmental modelling & software, 108, 61-66.
+# ---------------------------------------------------------------------------- #
+# ReliefF algorithm
+# Assumptions? 
+
+# Posit that supervised works best for predictive (but how about variance?)
+
+library(CORElearn)
+library(arulesCBA)
+
+brazil_df <- brazil_df %>%
+  mutate(bef_message_bool = as.factor(bef_message_bool))
+
+# urbanity
+# --------
+disc_urbanity <- discretizeDF.supervised(
+  bef_message_bool ~ new_urbanity,
+  brazil_df[,c("bef_message_bool", "new_urbanity")])
+# apparently 0.85 is fine.
+table(disc_urbanity$new_urbanity)
+brazil_df <- brazil_df %>%
+  mutate(urbanity_disc = ifelse(new_urbanity > 0.84, 1, 0))
+# check: did it work? 
+testje <- brazil_df %>%
+  select(new_urbanity, urbanity_disc)
+
+# HDI (will be done manually)
+# -----------------------------
+# What would they do for HDI if we weren't going to do it manually?
+disc_hdi <- discretizeDF.supervised(
+  bef_message_bool ~ new_idhm,
+  data = brazil_df[,c("bef_message_bool", "new_idhm")])
+table(disc_hdi)
+# HDI discretization manually according to website
+brazil_df <- brazil_df %>%
+  mutate(hdi_class = ifelse(new_idhm < 0.551, "low", ""),
+         hdi_class = ifelse(new_idhm > 0.550 & new_idhm < 0.700, "medium", hdi_class),
+         hdi_class = ifelse(new_idhm > 0.699 & new_idhm < 0.800, "high", hdi_class),
+         hdi_class = ifelse(new_idhm > 0.799, "very high",  hdi_class)
+        )
+# check: did it work? 
+testje <- brazil_df %>%
+  select(new_idhm, hdi_class)
+
+# Max price
+# ----------
+disc_max_price <- discretizeDF.supervised(
+  bef_message_bool ~ max_price,
+  data = brazil_df[,c("bef_message_bool", "max_price")])
+# Three categories it is, I guess.
+table(disc_max_price)
+# Apply discretizations
+brazil_df <- brazil_df %>%
+  mutate(max_price_disc = ifelse(max_price < 50, "low", ""),
+         max_price_disc = ifelse(max_price > 49 & max_price < 192, "medium", max_price_disc),
+         max_price_disc = ifelse(max_price > 191, "high", max_price_disc)
+        )
+# check: did it work?
+testje <- brazil_df %>%
+  select(max_price, max_price_disc)
+
+
+# item count
+# ----------
+disc_item_count <- discretizeDF.supervised(
+  bef_message_bool ~ item_count,
+  data = brazil_df[,c("bef_message_bool", "item_count")])
+# This doesn't really make sense, especially because item is already discrete
+table(disc_item_count)
+# Apply discretizations
+brazil_df <- brazil_df %>%
+  mutate(item_count_disc = ifelse(item_count == 1, "single", ""),
+         item_count_disc = ifelse(item_count > 1 & item_count < 6, "multiple", item_count_disc),
+         item_count_disc = ifelse(item_count > 5, "large", item_count_disc)
+        )
+
+# message length
+# --------------
+
+# including zeros
+hist(brazil_df$bef_nchar)
+# excluding zeros
+hist(brazil_df[brazil_df$bef_nchar > 0,]$bef_nchar)
+
+disc_item_count <- discretizeDF.supervised(
+  bef_message_bool ~ item_count,
+  data = brazil_df[,c("bef_message_bool", "item_count")])
+
+
 # ---------- #
 # Write file #
 # ---------- #
