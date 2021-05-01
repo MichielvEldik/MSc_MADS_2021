@@ -70,6 +70,7 @@ brazil_df <- brazil_df %>%
 
 
 brazil_df <- brazil_df %>%
+
   mutate(north_vs_south = ifelse(north == 1 | northeast == 1, "all_north", ""),
          north_vs_south = ifelse(south == 1 | southeast == 1, "all_south", north_vs_south),
          north_vs_south = ifelse(centerwest == 1, "centerwest", north_vs_south),
@@ -131,6 +132,18 @@ subset_3 <- subset_3[sample(nrow(subset_3), 5459, replace = FALSE, prob = NULL),
 brazil_df <- rbind(subset_1, subset_2)
 brazil_df <- rbind(brazil_df, subset_3)
 
+
+# discretize even further because too little in low. 
+# Best to consider conditional gaussian network though!
+# Can also include length in that case.
+# Lose less information. 
+brazil_df$hdi_class <- 0
+brazil_df <- brazil_df %>%
+  mutate(hdi_class = ifelse(new_idhm < 0.700, "low medium", ""),
+         hdi_class = ifelse(new_idhm > 0.699 & new_idhm < 0.800, "high", hdi_class),
+         hdi_class = ifelse(new_idhm > 0.799, "very high",  hdi_class),
+         hdi_class = as.factor(hdi_class)
+  )
 
 # ---------------------------------------------------------------------------- #
 hey <- glm(bef_message_bool 
@@ -453,13 +466,104 @@ qgraph(Res, nodeNames = Labels, legend.cex = 0.5,
 
 # Res <- set.arc(Res, from = "intimate_goods", to = "experience_goods")
 
+
+
+
+qgraph(Res, nodeNames = Labels, legend.cex = 0.5,
+       asize = 3, edge.color = "black")
+
+# MLE
 fit <- bn.fit(Res, s1_brazil_df)
+
+bn.bayes <- bn.fit(Res, data = s1_brazil_df, method = "bayes", iss = 10)
+bn.bayes$top2box
+
+# Hdi class too little data
+fit$bef_message_bool
+
+bn.bayes$bef_message_bool
+
+# query
+cpquery(fit,
+        (bef_message_bool == "0"),
+        (urbanity_disc == "1"),
+        method = "lw"
+       )
+
+
+brazil_df %>%
+  filter(! hdi_class == "low")
+
+
+# Bootstrap
+str_network <- boot.strength(
+  s1_brazil_df,
+  algorithm = "tabu",
+  algorithm.args = list(
+    blacklist = Blacklist,
+    whitelist = Whitelist,
+    tabu = 10
+  ))
+
+filtered_s1_brazil_df <- s1_brazil_df %>%
+  select(-hdi_class)
+
+hi <- bn.boot(data = filtered_s1_brazil_df, R = 2, m = 500, algorithm = "gs",
+        statistic = arcs)
+hi[[2]]
+
+filtered_Blacklist <- matrix(c(
+    "bef_message_bool", "intimate_goods",
+    "bef_message_bool", "urbanity_disc",
+    "bef_message_bool", "experience_goods",
+    "bef_message_bool", "south",
+    "bef_message_bool", "freight_issue_bool",
+    "bef_message_bool", "top2box",
+    # Nothing can cause north or noortheast membership
+    
+    "experience_goods", "south",
+    "intimate_goods", "south",
+    "urbanity_disc", "south",
+    "experience_goods", "south",
+    "freight_issue_bool", "south",
+    "top2box", "south",
+    
+    "intimate_goods", "experience_goods",
+    "experience_goods", "intimate_goods"
+    
+  ),, 2 ,byrow=TRUE)
+colnames(filtered_Blacklist) <- c("from", "to")
+  
+filtered_Blacklist
+  
 
 
 table(brazil_df$north_vs_south, brazil_df$experience_goods)
 
+bt_str <- boot.strength(filtered_s1_brazil_df, 
+                        R = 200,
+                        m = nrow(filtered_s1_brazil_df) %/% 1.08,
+                        algorithm.args=list(blacklist=filtered_Blacklist),
+                        algorithm = "gs")
+
+
+bt_str
+
+avg30 <- averaged.network(bt_str, threshold = 0.30)
+
+gR <- strength.plot(
+  avg30,
+  bt_str,
+  shape = "rectangle",
+  render = FALSE,
+  layout = "dot"
+)
+plot(gR)
 
 fit$intimate_goods
+
+library(rgraphviz)
+
 
 # ----- [hybrid bayes nets with HydeNet] ------------------------------------- #
 # https://cran.r-project.org/web/packages/HydeNet/vignettes/GettingStartedWithHydeNet.html
