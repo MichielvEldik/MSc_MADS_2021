@@ -113,6 +113,11 @@ brazil_df <- brazil_df %>%
   filter(freight_issue_bool == 0 & other_issue == 0)
 
 
+# aft_message
+brazil_df <- brazil_df %>%
+  mutate(aft_mes_bool = ifelse(bef_nchar > 0, 1, 0))
+
+
 # -----[ Subsetting ] -------------------------------------------------------- #
 
 subset_1 <- brazil_df %>%
@@ -219,7 +224,16 @@ summary(hey_3)
 vif(hey_3)
 hist(hey_3$residuals)
 
+library(pscl)
 
+# Zero-inflated Poisson Regression – The focus of this web page.
+# Zero-inflated Negative Binomial Regression – Negative binomial regression does better with over dispersed data, i.e. variance much larger than the mean.
+# Ordinary Count Models – Poisson or negative binomial models might be more appropriate if there are no excess zeros.
+# OLS Regression – You could try to analyze these data using OLS regression. However, count data are highly non-normal and are not well estimated by OLS regression.
+
+hey_4 <- lm ()
+
+summary(zeroinfl(bef_nchar ~ log(new_idhm) + review_score + north_vs_south | log(new_idhm) + review_score + north_vs_south , data = brazil_df))
 
 heckman <- selection(selection = bef_message_bool 
                      ~ scale(new_idhm)
