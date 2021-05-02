@@ -149,6 +149,7 @@ center_scale <- function(x) {
 # apply it
 brazil_df$new_idhm <- center_scale(brazil_df$new_idhm)
 brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
+brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
 
 # -------------------------------- METROS ------------------------------------ #
 
@@ -403,17 +404,82 @@ mm_quatro <- glmer(bef_message_bool ~ 1
                    + (1 | customer_state)
                    + year 
                    + new_idhm 
-                   + urbanity_disc
+                   + new_urbanity
                    + other_issue 
                    + region
                    + intimate_goods
                    + experience_goods
-                   + item_count_disc
+                   + item_count
                    + log(max_price), 
                    family = binomial(link = "logit"), 
                    data = brazil_df,
                    control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun=2e5)))
 
+
+mm_quatro_city <- glmer(bef_message_bool ~ 1 
+                   + review_score 
+                   + (1 | customer_city)
+                   + (1 | customer_state)
+                   + year 
+                   + new_idhm 
+                   + new_urbanity
+                   #+ other_issue # Has Nas _. colSums(is.na(metros_1))
+                   + region
+                   + sent_sun
+                   + new_young_ratio
+                   + intimate_goods
+                   + experience_goods
+                   + review_score*region # takes a loooooong time
+                   + item_count           # MEAN CENTERED OR DISCRETIZED
+                   + log(max_price), # !!!!!!!!!!!!!! Should be MEAN CENTERED! 
+                   family = binomial(link = "logit"), 
+                   data = brazil_df,
+                   control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun=2e5)))
+
+mm_quatro_nostate<- glmer(bef_message_bool ~ 1 
+                        + review_score 
+                        + (1 | customer_city)
+                        + year 
+                        + new_idhm 
+                        + new_urbanity
+                        #+ other_issue 
+                        + region
+                        + sent_sun
+                        + new_young_ratio
+                        + intimate_goods
+                        + experience_goods
+                        + item_count
+                        + log(max_price), 
+                        family = binomial(link = "logit"), 
+                        data = brazil_df,
+                        control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun=2e5)))
+library(margins)
+
+m <- margins(mm_quatro_city, data = brazil_df)
+
+fixef(mm_quatro_city)
+
+# multicollinearity through variance inflation scores
+vif()
+
+# Linearity assumption with Box-Tidwell 
+
+# Deviance residuals
+print("What the hell is deviance and are deviance residuals?")
+
+print("State Count")
+
+
+# Are there any more interaction effects?
+
+# How to interpret 
+
+# Low level state counts; is that a problem?
+
+
+
+summary(mm_quatro_nostate)
+summary(mm_quatro_city)
 summary(mm_quatro)
 summary(mm)
 confint(mm) # for parameter estimates
@@ -427,7 +493,7 @@ anova(mm, mm_dos)
 anova(mm_dos, mm_tres)
 anova(mm_tres, mm_quatro)
 
-anova(gg, mm_quatro)
+anova(mm_quatro_city, mm_quatro)
 
 summary(mm_quatro)
 confint(mm_quatro)
