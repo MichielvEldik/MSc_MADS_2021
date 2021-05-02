@@ -1,6 +1,7 @@
 library(car)
 library(dplyr)
 library(sampleSelection)
+library(sjstats)
 # Hello, world
 input <- read.csv("full_geomerged_df_5.csv")
 brazil_df <- input
@@ -59,9 +60,18 @@ colSums(is.na(brazil_df))
 
 # [last variable transformations] -------------------------------------------- #
 
+# Actual clusters
+
+
 brazil_df <- brazil_df %>%
   mutate(other_issue = ifelse(diff_est_deliv < 1, 1, 0))
 
+# year
+brazil_df <- brazil_df %>%
+  mutate(year = ifelse(y_2016 == 1, "2016", ""),
+         year = ifelse(y_2017 == 1, "2017", year),
+         year = ifelse(y_2018 == 1, "2018", year),
+         year = as.factor(year))
 
 # As factor score
 brazil_df <- brazil_df %>%
@@ -109,13 +119,38 @@ hoi <- brazil_df %>% group_by(customer_unique_id) %>% summarise(n = n())
 
 
 # Filter out freight comments
-brazil_df <- brazil_df %>%
-  filter(freight_issue_bool == 0 & other_issue == 0)
+# brazil_df <- brazil_df %>%
+#   filter(freight_issue_bool == 0 & other_issue == 0)
 
 
 # aft_message
 brazil_df <- brazil_df %>%
   mutate(aft_mes_bool = ifelse(bef_nchar > 0, 1, 0))
+
+
+
+brazil_df <- brazil_df %>% 
+  mutate(region = ifelse(north == 1, "north", ""),
+         region = ifelse(northeast == 1, "northeast", region),
+         region = ifelse(centerwest == 1, "centerwest", region),
+         region = ifelse(southeast == 1, "southeast", region),
+         region = ifelse(south == 1, "south", region),
+         region = ifelse(customer_state == "DF", "southeast", region),
+         region = as.factor(region))
+
+
+
+# Mean centering
+# centering with 'scale()'
+center_scale <- function(x) {
+  scale(x, scale = FALSE)
+}
+
+# apply it
+brazil_df$new_idhm <- center_scale(brazil_df$new_idhm)
+brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
+
+# -------------------------------- METROS ------------------------------------ #
 
 
 # -----[ Subsetting ] -------------------------------------------------------- #
@@ -153,18 +188,9 @@ brazil_df <- brazil_df %>%
 # ---------------------------------------------------------------------------- #
 hey <- glm(bef_message_bool 
            ~ new_idhm
-           + freight_issue_bool
-           + urbanity_disc
-           + top2box
-           + review_sent_wknd
-           + udh_indicator
-           + max_price
-           + search_goods
-           + experience_goods
-           + intimate_goods
-           #+ north_vs_south
+           + region
            , 
-           data = brazil_df[brazil_df$north_vs_south == "centerwest" | brazil_df$north_vs_south == "all_north" ,], 
+           data = brazil_df, 
            family = binomial(link = "logit")
            )
 summary(hey)
@@ -231,7 +257,216 @@ library(pscl)
 # Ordinary Count Models – Poisson or negative binomial models might be more appropriate if there are no excess zeros.
 # OLS Regression – You could try to analyze these data using OLS regression. However, count data are highly non-normal and are not well estimated by OLS regression.
 
-hey_4 <- lm ()
+library(lme4)
+
+m <- glmer(bef_message_bool ~ new_idhm + north_vs_south + intimate_goods + review_score + Experience +
+             (1 | DID), data = brazil_df, family = binomial, control = glmerControl(optimizer = "bobyqa"),
+           nAGQ = 10)
+
+
+ggplot(data  = brazil_df,
+       aes(x = north_vs_south,
+           y = new_idhm)) +
+  geom_point(size     = 1.2,
+             alpha    = .8,
+             position = "jitter") #to add some random noise for plotting purposes
+
+# To test assumptions
+# http://www.sthda.com/english/articles/36-classification-methods-essentials/148-logistic-regression-assumptions-and-diagnostics-in-r/#linearity-assumption
+
+ #On ICC
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4913118/
+
+
+ggplot(data  = brazil_df,
+       aes(x = region,
+           y = log(new_idhm))) + geom_violin()
+
+ggplot(data  = brazil_df,
+       aes(x = region,
+           y = log(new_young_ratio))) + geom_violin()
+
+ggplot(data  = brazil_df,
+       aes(x = hdi_class,
+           y = log(new_young_ratio))) + geom_violin()
+
+
+# mixed effects model 
+m1 <- glmer(
+  bef_message_bool ~ (1 | customer_city), 
+  data = brazil_df, 
+  family = binomial(link = "logit")
+)
+summary(m1)
+
+
+brazil_df <- brazil_df %>%
+  mutate(udh.Territorialidades = ifelse(is.na(udh.Territorialidades), customer_city, udh.Territorialidades))
+
+m2 <- glmer(bef_message_bool 
+            ~ hdi_class 
+            + review_score 
+            + intimate_goods 
+            + new_urbanity 
+            + region
+            + (1 | customer_city)
+            + (1 | customer_city:region),
+  data = brazil_df, 
+  family = binomial(link = "logit"),
+  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun=2e5))
+)
+summary(m2)
+icc(m2)
+vif(m2)
+
+# https://www.youtube.com/watch?v=LzAwEKrn2Mc
+gg <- glm(bef_message_bool ~
+            review_score
+          + new_idhm
+          + region
+          + urbanity_disc
+          + other_issue
+          + year,
+          data = brazil_df, 
+          family = binomial(link = "logit"))
+
+summary(gg)
+
+baseline <- glm(bef_message_bool ~ 1, 
+                data = brazil_df, 
+                family = binomial(link = "logit"))
+summary(baseline)
+AIC(baseline)
+AIC(mm_city)
+
+anova(baseline, mm)
+
+mm_city <- glmer(bef_message_bool ~ 1 + (1 | customer_city), family = binomial(link = "logit"), data = brazil_df) 
+summary(mm)
+
+mm_state <- glmer(bef_message_bool ~ 1 + (1 | customer_state), family = binomial(link = "logit"), data = brazil_df)
+
+mm_wind <- glmer(bef_message_bool ~ 1 + (1 | north_vs_south), family = binomial(link = "logit"), data = brazil_df)
+
+mm_city_state <- glmer(bef_message_bool ~ 1 + (1 | customer_city) + (1 | customer_state), family = binomial(link = "logit"), data = brazil_df)
+
+mm_udh <- glmer(bef_message_bool ~ 1 + 
+                  (1 | udh_indicator) + 
+                  (1 | customer_state), 
+                family = binomial(link = "logit"), 
+                data = brazil_df)
+
+mm_city_state_wind_year <- glmer(bef_message_bool ~ 1 
+                            + (1 | customer_city) 
+                            + (1 | customer_state) 
+                            + (1 | north_vs_south)
+                            + (1 | year), 
+                            family = binomial(link = "logit"), data = brazil_df)
+
+final_model <- glmer(bef_message_bool ~ 1 
+                            + (1 | udh_indicator) 
+                            + (1 | customer_state) 
+                            + year
+                            + new_idhm
+                            + review_score
+                            + region
+                            + intimate_goods
+                            + experience_goods
+                            + urbanity_disc
+                     , family = binomial(link = "logit"), data = brazil_df)
+
+
+AIC(baseline)
+AIC(mm_city)
+AIC(mm_state)
+AIC(mm_wind)
+AIC(mm_city_state)
+anova(mm_city, mm_city_state)
+AIC(mm_city_state_wind)
+AIC(mm_city_state_wind_year)
+summary(final_model)
+
+anova(mm_city, mm_city_state_wind_year)
+
+# Proportion of singletons!!!
+
+
+
+mm <- glmer(bef_message_bool ~ 1 + (1 | udh.Territorialidades), family = binomial(link = "logit"), data = brazil_df)
+mm_dos <- glmer(bef_message_bool ~ 1 + review_score + (1 | udh.Territorialidades), family = binomial(link = "logit"), data = brazil_df)
+mm_tres <- glmer(bef_message_bool ~ 1 + review_score + (1 | udh.Territorialidades) + hdi_class, family = binomial(link = "logit"), data = brazil_df)
+
+
+mm_quatro <- glmer(bef_message_bool ~ 1 
+                   + review_score 
+                   + (1 | udh.Territorialidades)
+                   + (1 | customer_state)
+                   + year 
+                   + new_idhm 
+                   + urbanity_disc
+                   + other_issue 
+                   + region
+                   + intimate_goods
+                   + experience_goods
+                   + item_count_disc
+                   + log(max_price), 
+                   family = binomial(link = "logit"), 
+                   data = brazil_df,
+                   control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun=2e5)))
+
+summary(mm_quatro)
+summary(mm)
+confint(mm) # for parameter estimates
+library(merTools)
+# interclass correlation
+ICC(mm, outcome = "bef_message_bool", group = "udh.Territorialidades", data = brazil_df)
+performance:icc(mm_quatro)
+summary(mm_quatro)
+
+anova(mm, mm_dos)
+anova(mm_dos, mm_tres)
+anova(mm_tres, mm_quatro)
+
+anova(gg, mm_quatro)
+
+summary(mm_quatro)
+confint(mm_quatro)
+# Follow this one!
+# https://www.rensvandeschoot.com/tutorials/generalised-linear-models-with-glm-and-lme4/
+
+fita <- glm(bef_message_bool ~ 1, data = brazil_df, family = binomial("logit")) 
+
+
+brazil_df[brazil_df$customer_state == 'SP',] %>%
+  filter(grepl("osasco", customer_city))
+
+
+
+# Center within cluster
+print("center within cluster before!")
+
+
+logLik(fita)-logLik(m1) 
+
+ggpredict(m1, "var_cont") %>% plot()
+
+
+# Manual Heckmann
+hey_4 <- glm(bef_nchar
+             ~ log(new_idhm)
+             + north_vs_south
+             + intimate_goods
+             + other_issue
+             + experience_goods
+             + item_count
+             #+ top2box
+             + urbanity_disc
+             + review_score
+             + log(max_price),
+             data = brazil_df[brazil_df$bef_nchar > 0,], family = poisson(link = "log"))
+
+summary(hey_4)
+
 
 summary(zeroinfl(bef_nchar ~ log(new_idhm) + review_score + north_vs_south | log(new_idhm) + review_score + north_vs_south , data = brazil_df))
 
@@ -256,6 +491,15 @@ heckman <- selection(selection = bef_message_bool
                      + log(max_price),
                      data = brazil_df, method = "2step")
 summary(heckman)
+
+# MANUAL HECKMAN TO USE POISSON
+
+
+
+
+
+
+
 
 
 plot(brazil_df[brazil_df$bef_nchar > 0,]$bef_nchar, 
