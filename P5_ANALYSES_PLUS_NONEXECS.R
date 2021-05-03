@@ -476,6 +476,8 @@ print("State Count")
 
 # Low level state counts; is that a problem?
 
+# Currently; random intercepts, how about random intercepts AND slopes?
+# Because apparently north different from south! 
 
 
 summary(mm_quatro_nostate)
@@ -537,11 +539,10 @@ summary(hey_4)
 summary(zeroinfl(bef_nchar ~ log(new_idhm) + review_score + north_vs_south | log(new_idhm) + review_score + north_vs_south , data = brazil_df))
 
 heckman <- selection(selection = bef_message_bool 
-                     ~ scale(new_idhm)
+                     ~ new_idhm
                      + urbanity_disc
                      + north_vs_south
                      + review_score
-                     + other_issue
                      + experience_goods
                      + intimate_goods
                      + product_weight_g
@@ -551,7 +552,7 @@ heckman <- selection(selection = bef_message_bool
                      + log(max_price), 
                      
                      outcome = log(bef_nchar) 
-                     ~ log(new_idhm) 
+                     ~ new_idhm 
                      + north_vs_south 
                      + review_score
                      + log(max_price),
