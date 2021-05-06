@@ -495,7 +495,7 @@ mm_quatro_city <- glmer(bef_message_bool ~ 1
                    + new_young_ratio
                    + intimate_goods
                    + experience_goods
-                   + review_score*region # takes a loooooong time
+                   + review_score # takes a loooooong time
                    + item_count           # MEAN CENTERED OR DISCRETIZED
                    + log(max_price), # !!!!!!!!!!!!!! Should be MEAN CENTERED! 
                    family = binomial(link = "logit"), 
