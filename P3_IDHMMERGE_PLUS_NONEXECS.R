@@ -1019,6 +1019,7 @@ brazil_df <- merge(brazil_df,
                 by.x = "customer_city",
                 by.y = "old_names",
                 all.x = TRUE)
+
 brazil_df <- brazil_df %>%
   mutate(customer_city = ifelse(is.na(new_names) == TRUE, customer_city, new_names)) %>%
   select(- new_names)
@@ -1287,10 +1288,17 @@ binded_df <- binded_df %>%
     - mc.young_ratio
         )
 
-# experii <- experii %>%
-#  mutate(udh_indicator = ifelse(is.na(udh.urbanity) == FALSE, 1, 0))
-
 colSums(is.na(binded_df))
+
+neije <- binded_df %>%
+  select(udh.Territorialidades, customer_city)
+
+
+binded_df <- binded_df %>%
+  mutate(udh.Territorialidades = as.character(udh.Territorialidades),
+         customer_city = as.character(customer_city),
+         customer_city = ifelse(!is.na(udh.Territorialidades) & !is.na(customer_city), udh.Territorialidades, customer_city),
+         customer_city = as.factor(customer_city))
 
 # Fine, it's the unavailable / undelivered 
 absence_maxprice <- binded_df[is.na(binded_df$max_price) == TRUE,]

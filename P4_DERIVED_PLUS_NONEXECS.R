@@ -75,13 +75,29 @@ brazil_df <- brazil_df %>%
       review_answer_dow == "zo" | review_answer_dow == "za", 1, 0)
         )
 
+# Year as seperate variables
 brazil_df<- brazil_df %>%
   mutate(
     y_2016 = ifelse(year(order_purchase_timestamp) == "2016", 1, 0),
     y_2017 = ifelse(year(order_purchase_timestamp) == "2017", 1, 0),
     y_2018 = ifelse(year(order_purchase_timestamp) == "2016", 1, 0)
         )
+# Year as 1 factor variable 
+brazil_df$year <- "2016"
+brazil_df <- brazil_df %>%
+  mutate(year = ifelse(y_2017 == 1, "2017", year),
+         year = ifelse(y_2018 == 1, "2018", year),
+         year = as.factor(year))
 
+brazil_df <- brazil_df %>%
+  mutate(sent_sun = ifelse(review_sent_dow == "zo", 1, 0),
+         sent_mon = ifelse(review_sent_dow == "ma", 1, 0),
+         sent_tue = ifelse(review_sent_dow == "di", 1, 0),
+         sent_wed = ifelse(review_sent_dow == "wo", 1, 0),
+         sent_thu = ifelse(review_sent_dow == "do", 1, 0),
+         sent_fri = ifelse(review_sent_dow == "vr", 1, 0),
+         sent_sat = ifelse(review_sent_dow == "za", 1, 0)
+        )
 
 # ----------------------------- #
 # Message and title derivatives # ---------------------------------------------
@@ -224,12 +240,20 @@ brazil_df <- brazil_df %>%
          centerwest = ifelse(customer_state %in% c_centerwest, 1,0),
         )
 
+brazil_df <- brazil_df %>% 
+  mutate(region = ifelse(north == 1, "north", ""),
+         region = ifelse(northeast == 1, "northeast", region),
+         region = ifelse(centerwest == 1, "centerwest", region),
+         region = ifelse(southeast == 1, "southeast", region),
+         region = ifelse(south == 1, "south", region),
+         region = ifelse(customer_state == "DF", "southeast", region), # Belongs to southeast, culturally
+         region = as.factor(region))
+
 # ------------------------------------ #
 # Distinguish freight-related messages # ------------------------------------- # 
 # ------------------------------------ #
 
-# Due to lemmatization we don't need to worry about tenses or 
-
+# Due to lemmatization we don't need to worry about tenses
 listje <- c("receb", # received
             "aguar", # wait 
             "ainda", # yet 
@@ -244,8 +268,10 @@ listje <- c("receb", # received
             "prazo" # term / deadline
            )
 
+# To fill up
 brazil_df$freight_issue_bool <- 0
 
+# If any of the words in the list can be found, add "1"
 for (i in listje){
   brazil_df$freight_issue_bool <- ifelse(
     grepl(i, brazil_df$message_and_title), 
@@ -253,6 +279,7 @@ for (i in listje){
     brazil_df$freight_issue_bool)
 }
 
+# Sanity test to see if it worked
 test_out <- brazil_df[
   brazil_df$freight_issue_bool == 1, 
   c("review_comment_message",
@@ -260,19 +287,9 @@ test_out <- brazil_df[
     "review_score"
     )]
 
-# ----------------- #
-# customer history  # 
-# ----------------- #
-
-# if customer in data apart from here, then look through all things
-# if date of thing close to current date
-# add difference/. 
-
-
-
-# Work in progress
-
-
+# When order is delivered after the estimated date, we name it "order_issue"
+brazil_df <- brazil_df %>%
+  mutate(other_issue = ifelse(diff_est_deliv < 1, 1, 0))
 
 
 # -------------- #
@@ -310,18 +327,34 @@ testje <- brazil_df %>%
 
 # HDI (will be done manually)
 # -----------------------------
+
 # What would they do for HDI if we weren't going to do it manually?
 disc_hdi <- discretizeDF.supervised(
   bef_message_bool ~ new_idhm,
   data = brazil_df[,c("bef_message_bool", "new_idhm")])
 table(disc_hdi)
+
 # HDI discretization manually according to website
 brazil_df <- brazil_df %>%
   mutate(hdi_class = ifelse(new_idhm < 0.551, "low", ""),
          hdi_class = ifelse(new_idhm > 0.550 & new_idhm < 0.700, "medium", hdi_class),
          hdi_class = ifelse(new_idhm > 0.699 & new_idhm < 0.800, "high", hdi_class),
-         hdi_class = ifelse(new_idhm > 0.799, "very high",  hdi_class)
+         hdi_class = ifelse(new_idhm > 0.799, "very high",  hdi_class),
+         # Get the factor levels into the right order
+         hdi_class = factor(hdi_class, levels = c("low", "medium", "high", "very high"))
         )
+levels(brazil_df$hdi_class)
+# Collapse because there 
+brazil_df <- brazil_df %>%
+  mutate(hdi_class_col = ifelse(new_idhm < 0.700, "low_medium", ""),
+         hdi_class_col = ifelse(new_idhm > 0.699 & new_idhm < 0.800, "high", hdi_class_col),
+         hdi_class_col = ifelse(new_idhm > 0.799, "very high",  hdi_class_col),
+         hdi_class_col = as.factor(hdi_class_col),
+         hdi_class_col = factor(hdi_class_col, levels = c("low_medium", "high", "very high"))
+        )
+levels(brazil_df$hdi_class_col)
+
+
 # check: did it work? 
 testje <- brazil_df %>%
   select(new_idhm, hdi_class)
@@ -369,6 +402,59 @@ hist(brazil_df[brazil_df$bef_nchar > 0,]$bef_nchar)
 disc_item_count <- discretizeDF.supervised(
   bef_message_bool ~ item_count,
   data = brazil_df[,c("bef_message_bool", "item_count")])
+
+
+
+
+# -------------------------- #
+# To the right type (factor) # ----------------------------------------------- #
+# -------------------------- #
+levels(brazil_df$year)
+
+cols <- c("bef_message_bool",
+          "max_price_disc",
+          "item_count_disc",
+          "urbanity_disc",
+          "freight_issue_bool",
+          "review_score",
+          "north",
+          "northeast",
+          "centerwest",
+          "south",
+          "southeast",
+          "y_2016",
+          "y_2017",
+          "y_2018",
+          "top2box",
+          "experience_goods",
+          "search_goods",
+          "intimate_goods",
+          "review_sent_wknd",
+          "review_answer_wknd",
+          "sent_sun",
+          "sent_mon",
+          "sent_tue",
+          "sent_wed",
+          "sent_thu",
+          "sent_fri",
+          "sent_sat",
+          "title_bool",
+          "title_or_message",
+          "title_and_message",
+          "title_nor_message")
+
+brazil_df[,cols] <- lapply(brazil_df[cols], function(x) as.factor(x))
+
+
+cols_2 <- c("diff_est_deliv",
+            "diff_pur_est",
+            "diff_pur_deliv",
+            "diff_rev_crea_ans",
+            "diff_rev_est_ans",
+            "diff_rev_deliv_ans")
+
+brazil_df[,cols_2] <- lapply(brazil_df[cols_2], function(x) as.integer(x))
+
 
 
 # ---------- #

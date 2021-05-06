@@ -62,32 +62,30 @@ colSums(is.na(brazil_df))
 
 # Actual clusters
 
-
+# {BOOM}
 brazil_df <- brazil_df %>%
   mutate(other_issue = ifelse(diff_est_deliv < 1, 1, 0))
 
-# year
+# year {BOOM}
 brazil_df <- brazil_df %>%
   mutate(year = ifelse(y_2016 == 1, "2016", ""),
          year = ifelse(y_2017 == 1, "2017", year),
          year = ifelse(y_2018 == 1, "2018", year),
          year = as.factor(year))
 
-# As factor score
+# As factor score {BOOM}
 brazil_df <- brazil_df %>%
   mutate(review_score = as.factor(review_score))
 
 
-
+# {BOOM}
 brazil_df <- brazil_df %>%
-
   mutate(north_vs_south = ifelse(north == 1 | northeast == 1, "all_north", ""),
          north_vs_south = ifelse(south == 1 | southeast == 1, "all_south", north_vs_south),
          north_vs_south = ifelse(centerwest == 1, "centerwest", north_vs_south),
          north_vs_south = as.factor(north_vs_south)
         )
 table(brazil_df$north_vs_south)
-
 table(brazil_df$hdi_class)
 
 
@@ -99,7 +97,7 @@ brazil_df <- brazil_df %>%
 
 
 table(brazil_df$hdi_class)
-
+# {BOOM}
 brazil_df$hdi_class <- factor(brazil_df$hdi_class, levels = c("medium", "high", "very high"))
 
 levels(brazil_df$hdi_class)
@@ -109,7 +107,7 @@ brazil_df$max_price_disc <- factor(brazil_df$max_price_disc, levels = c("low", "
 
 brazil_df$north_vs_south <- factor(brazil_df$north_vs_south, levels = c("centerwest", "all_south", "all_north"))
 
-
+# {BOOM}
 brazil_df <- brazil_df %>%
   mutate(sent_sun = ifelse(review_sent_dow == "zo", 1, 0),
          sent_mon = ifelse(review_sent_dow == "ma", 1, 0))
@@ -124,11 +122,12 @@ hoi <- brazil_df %>% group_by(customer_unique_id) %>% summarise(n = n())
 
 
 # aft_message
+# {BOOM}
 brazil_df <- brazil_df %>%
   mutate(aft_mes_bool = ifelse(bef_nchar > 0, 1, 0))
 
 
-
+# {BOOM}
 brazil_df <- brazil_df %>% 
   mutate(region = ifelse(north == 1, "north", ""),
          region = ifelse(northeast == 1, "northeast", region),
@@ -178,6 +177,7 @@ brazil_df <- rbind(brazil_df, subset_3)
 # Best to consider conditional gaussian network though!
 # Can also include length in that case.
 # Lose less information. 
+# {BOOM}
 brazil_df$hdi_class <- 0
 brazil_df <- brazil_df %>%
   mutate(hdi_class = ifelse(new_idhm < 0.700, "low medium", ""),
@@ -213,26 +213,50 @@ summary(glm(freight_issue_bool ~ new_idhm,
 
 
 
-hey_2 <- glm(bef_message_bool 
-           ~ scale(new_idhm)
-           + urbanity_disc
+hey_2 <- glm(title_or_message 
+           ~ new_idhm
+           + new_young_ratio
+           + new_urbanity
            + review_score
-           + north_vs_south
-           + other_issue
+           + region
            + experience_goods
            + intimate_goods
            + product_weight_g
-           + y_2018
-           #+ scale(new_young_ratio)
+           + year
+           + sent_mon
            + sent_sun
            + item_count
            + log(max_price)
            , 
-           data = brazil_df, 
+           data = brazil_df[brazil_df$freight_issue_bool == 0 & brazil_df$other_issue == 0,], 
            family = binomial(link = "logit")
 )
 summary(hey_2)
 vif(hey_2)
+
+
+hey_2 <- glm(title_or_message 
+             ~ new_idhm
+             + new_young_ratio
+             + new_urbanity
+             + review_score
+             + region
+             + experience_goods
+             + intimate_goods
+             + product_weight_g
+             + year
+             + sent_mon
+             + sent_sun
+             + item_count
+             + log(max_price)
+             , 
+             data = brazil_df_hdi[brazil_df_hdi$freight_issue_bool == 0 | brazil_df_hdi$other_issue == 0,], 
+             family = binomial(link = "logit")
+)
+summary(hey_2)
+vif(hey_2)
+
+
 
 hey_3 <- lm(log(bef_nchar)
             ~ log(new_idhm)
@@ -259,6 +283,7 @@ library(pscl)
 # OLS Regression – You could try to analyze these data using OLS regression. However, count data are highly non-normal and are not well estimated by OLS regression.
 
 library(lme4)
+library(ggplot2)
 
 m <- glmer(bef_message_bool ~ new_idhm + north_vs_south + intimate_goods + review_score + Experience +
              (1 | DID), data = brazil_df, family = binomial, control = glmerControl(optimizer = "bobyqa"),
@@ -266,7 +291,7 @@ m <- glmer(bef_message_bool ~ new_idhm + north_vs_south + intimate_goods + revie
 
 
 ggplot(data  = brazil_df,
-       aes(x = north_vs_south,
+       aes(x = region,
            y = new_idhm)) +
   geom_point(size     = 1.2,
              alpha    = .8,
@@ -281,7 +306,8 @@ ggplot(data  = brazil_df,
 
 ggplot(data  = brazil_df,
        aes(x = region,
-           y = log(new_idhm))) + geom_violin()
+           y = new_idhm)) + 
+  geom_violin() + stat_summary(new_idhm=mean, geom="point", shape=23, size=2)
 
 ggplot(data  = brazil_df,
        aes(x = region,
@@ -292,6 +318,42 @@ ggplot(data  = brazil_df,
            y = log(new_young_ratio))) + geom_violin()
 
 
+# Important state counts 
+
+brazil_no_freightissues <- brazil_df[brazil_df$freight_issue_bool == 0 & brazil_df$other_issue == 0, ]
+
+plot(brazil_df$new_young_ratio, brazil_df$new_idhm)
+
+table(brazil_no_freightissues$hdi_class, brazil_no_freightissues$region)
+
+table(brazil_no_freightissues$hdi_class, brazil_no_freightissues$region)
+
+brazil_df_yr <- brazil_df[brazil_df$new_young_ratio < 0.0237951 & brazil_df$new_young_ratio > -0.020,]
+
+plot(brazil_df_yr$new_young_ratio, brazil_df_yr$new_idhm)
+
+brazil_df_hdi <- brazil_df[brazil_df$new_idhm > -0.062045 & brazil_df$new_idhm < 0.052955,]
+
+library(ggridges)
+
+ggplot(brazil_df, aes(x = new_idhm, y = region, fill = region)) +
+  geom_density_ridges() +
+  theme_ridges() + 
+  theme(legend.position = "none")
+
+
+ggplot(brazil_df, aes(x = new_urbanity, y = region, fill = region)) +
+  geom_density_ridges() +
+  theme_ridges() + 
+  theme(legend.position = "none")
+
+
+ggplot(brazil_df, aes(x = new_young_ratio, y = region, fill = region)) +
+  geom_density_ridges() +
+  theme_ridges() + 
+  theme(legend.position = "none")
+
+
 # mixed effects model 
 m1 <- glmer(
   bef_message_bool ~ (1 | customer_city), 
@@ -299,6 +361,10 @@ m1 <- glmer(
   family = binomial(link = "logit")
 )
 summary(m1)
+
+
+
+
 
 
 brazil_df <- brazil_df %>%
@@ -433,7 +499,7 @@ mm_quatro_city <- glmer(bef_message_bool ~ 1
                    + item_count           # MEAN CENTERED OR DISCRETIZED
                    + log(max_price), # !!!!!!!!!!!!!! Should be MEAN CENTERED! 
                    family = binomial(link = "logit"), 
-                   data = brazil_df,
+                   data = brazil_df[brazil_df$freight_issue_bool == 0,],
                    control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun=2e5)))
 
 mm_quatro_nostate<- glmer(bef_message_bool ~ 1 
