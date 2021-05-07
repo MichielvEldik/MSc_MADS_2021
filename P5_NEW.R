@@ -3,14 +3,13 @@ library(dplyr)
 library(sampleSelection)
 library(sjstats)
 library(ggplot2)
-
 library(lme4)
+library(tictoc)
 
 
 # Load data ------------------------------------------------------------------ #
 input <- read.csv("full_geomerged_df_5.csv")
 brazil_df <- input
-
 
 # Descriptives continuous ---------------------------------------------------- #
 
@@ -72,7 +71,7 @@ ggplot(brazil_df) +
 
 # Mean centering ------------------------------------------------------------- #
 center_scale <- function(x) {
-  scale(x, scale = FALSE)
+  scale(x, scale = TRUE)
 }
 
 # apply it
@@ -80,6 +79,15 @@ brazil_df$new_idhm <- center_scale(brazil_df$new_idhm)
 brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
 brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
 brazil_df$max_price <- center_scale(brazil_df$max_price)
+
+# Outliers ------------------------------------------------------------------- #
+
+hist(brazil_df$max_price)
+
+maximum_price <- brazil_df %>%
+  select(max_price)
+
+
 
 # Factor type ----------------------------------------------------------------- #
 
@@ -118,11 +126,23 @@ cols <- c("bef_message_bool",
 
 brazil_df[,cols] <- lapply(brazil_df[cols], function(x) as.factor(x))
 
-# Missingness? ---------------------------------------------------------------- #
-colSums(is.na(brazil_df))
+brazil_df <- brazil_df %>%
+  mutate(item_count_disc = factor(item_count_disc, 
+                                  levels = c("single", "multiple", "large")))
+
+
+
+
+# Get ird of stuff ------------------------------------------------------------ #
+
 
 brazil_df <- brazil_df %>%
   filter(order_status == "delivered")
+
+# Get rid of NA in DV
+colSums(is.na(brazil_df))
+brazil_df <- brazil_df %>%
+  filter(!is.na(bef_message_bool))
 
 # Formula Definition ---------------------------------------------------------- #
 
@@ -135,7 +155,7 @@ iv_var <- c("review_score",
             "new_young_ratio",
             "region",
             "review_sent_dow",
-            "item_count",
+            "item_count_disc",
             "experience_goods",
             "intimate_goods",
             "max_price"
@@ -147,7 +167,12 @@ iv_var_int <- c("1",
                 "new_idhm",
                 "new_urbanity",
                 "new_young_ratio",
-                "region"
+                "region",
+                "experience_goods",
+                "intimate_goods",
+                "item_count_disc",
+                "max_price",
+                "review_sent_dow"
                )
 
 state_mei <- "(1 | customer_state)" # mixed effects on intercept 
@@ -244,27 +269,21 @@ fit_single_logit <- glm(main_sing,
 summary(fit_single_logit)
 AIC(fit_single_logit)
 
-# There is no
-fit_single_interactions <- glm(bef_message_bool ~
-                                 region*review_score,
-                               data = brazil_df,
-                               family = binomial(link = "logit"))
-summary(fit_single_interactions)
-
-fit_single <- glm(bef_message_bool ~
-                                 region + review_score + ,
-                               data = brazil_df,
-                               family = binomial(link = "logit"))
-summary(fit_single)
-
-
-
-
-anova(fit_single_interactions, fit_single)
 
 
 fit_city <- me_function(main_city, brazil_df)
 summary(fit_city)
+AIC(fit_city)
+
+
+fit_single_logit <- glm(main_sing,
+                        data = fit_city@frame,
+                        family = binomial(link = "logit"))
+
+summary(fit_single_logit)
+
+anova(fit_city, fit_single_logit)
+
 
 fit_state <- me_function(main_state, brazil_df)
 summary(fit_state)
@@ -291,7 +310,7 @@ AIC(fit_city_state)
 AIC(fit_state)
 
 
-anova(fit_state, fit_city)
+anova(fit_city, fit_single_logit)
 
 # One level is enough
 anova(fit_state_city, fit_city)
@@ -322,43 +341,148 @@ train_ind <- sample(seq_len(nrow(brazil_df)), size = train_size)
 train <- brazil_df[train_ind, ]
 test <- brazil_df[-train_ind, ]
 
-
+colSums(is.na(test))
+colSums(is.na(train))
 
 # Validation ------------------------------------------------------------------ #
 
-validation_function <- function(fitted_model, test_set){
-  probabilities <- fitted_model %>% predict(test_set, type = "response")
-  predicted.classes <- ifelse(probabilities > 0.50, 1, 0)
+validation_function <- function(fitted_model, test_set, multilevel, probability){
+  if (multilevel == 1)
+    {
+    probabilities <- fitted_model %>% predict(test_set, 
+                                              type = "response",
+                                              allow.new.levels = TRUE)
+    } 
+  else 
+  {
+    probabilities <- fitted_model %>% predict(test_set, 
+                                              type = "response",
+                                              allow.new.levels = FALSE)
+  }
+  # Perform classification based on probability
+  predicted.classes <- ifelse(probabilities > probability, 1, 0)
   predicted.classes
   
+  # bind 
   probies <- cbind(as.character(test_set$bef_message_bool), predicted.classes)
   probies <- as.data.frame(probies)
   
   probies <- probies %>%
     mutate(true_positives = ifelse(V1 == "1" & predicted.classes == "1", 1, 0),
            true_negatives = ifelse(V1 == "0" & predicted.classes == "0", 1, 0),
+           false_positives = ifelse(V1 == "0" & predicted.classes == "1", 1, 0),
+           false_negatives = ifelse(V1 == "1" & predicted.classes == "0", 1, 0),
            hit_rate = ifelse(true_positives == "1" | true_negatives == "1", 1, 0)
-    )
+          )
   
+  # Compute hitrate
   hit_rate <- mean(probies$hit_rate, na.rm = TRUE)
   
   return(hit_rate)
 }
 
+# No random effects at all
+# ------------------------
 fit_single_logit <- glm(main_sing,
                         data = train,
                         family = binomial(link = "logit"))
+summary(fit_single_logit)
 
-hit_rate_1 <- validation_function(fit_single_logit, test)
+hit_rate_1 <- validation_function(fit_single_logit, 
+                                  test,
+                                  multilevel = 0,
+                                  probability = 0.58)
 print(hit_rate_1)  
-  
+
+
+# Random effects only 
+# -------------------
+fit_city <- me_function(main_city, train)
+summary(fit_city)
+
+hit_rate_city <- validation_function(fit_city,
+                                     test,
+                                     multilevel = 1,
+                                     probability = 0.575)
+print(hit_rate_city)
+
+AIC(fit_city)
+
+# City State
+# ----------
+
+fit_state_city <- me_function(main_citystate, train)
+summary(fit_state_city)
+
+hit_rate_statecity <- validation_function(fit_state_city,
+                                     test,
+                                     multilevel = 1,
+                                     probability = 0.566)
+print(hit_rate_statecity)
+
+
+anova(fit_city, fit_state_city) # No evidence that state offers better fit.
+anova(fit_single_logit, fit_city, test = "Chisq" )
+
+
+# Mixed random effects at hdi 
+# ---------------------------
 random_eff_city <- me_function(random_eff_city, train)
 summary(random_eff_city)
-hit_rate_2 <- validation_function(random_eff_city, test)
 
 
-probabilities <- random_eff_city %>% predict(test, type = "response")
 
+
+
+# Singularity? NO!
+tt <- getME(random_eff_city,"theta")
+ll <- getME(random_eff_city,"lower")
+min(tt[ll==0])
+
+
+
+
+
+
+model <- glmer(formula = random_eff_city,
+               family = binomial(link = "logit"),
+               data = train,
+               control = glmerControl(
+                 optimizer = "bobyqa", 
+                 optCtrl = list(maxfun=2e5))
+               )
+hit_rate_2 <- validation_function(model,
+                                  test,
+                                  multilevel = 1,
+                                  probability = 0.65)
+print(hit_rate_2)
+
+
+
+summary(model)
+  
+
+
+
+
+hit_rate_2 <- validation_function(model, test, type = "response")
+
+
+probabilities <- model %>% predict(test, type = "response", allow.new.levels = TRUE)
+predicted.classes <- ifelse(probabilities > 0.55, 1, 0)
+predicted.classes
+
+probies <- cbind(as.character(test$bef_message_bool), predicted.classes)
+probies <- as.data.frame(probies)
+
+probies <- probies %>%
+  mutate(true_positives = ifelse(V1 == "1" & predicted.classes == "1", 1, 0),
+         true_negatives = ifelse(V1 == "0" & predicted.classes == "0", 1, 0),
+         hit_rate = ifelse(true_positives == "1" | true_negatives == "1", 1, 0)
+  )
+
+hit_rate <- mean(probies$hit_rate, na.rm = TRUE)
+hit_rate
 
 
 
