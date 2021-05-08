@@ -5,6 +5,7 @@ library(sjstats)
 library(ggplot2)
 library(lme4)
 library(tictoc)
+library(glmmTMB)
 
 # Load data ------------------------------------------------------------------ #
 input <- read.csv("full_geomerged_df_5.csv")
@@ -407,8 +408,9 @@ main_sing
 
 brazil_pos <- brazil_df[brazil_df$review_score == 4 | brazil_df$review_score == 5 | brazil_df$review_score == 3,]
 brazil_neg <- brazil_df[brazil_df$review_score == 1 | brazil_df$review_score == 2,]
-brazil_north <- 
+ 
 
+  
 fit_1 <- glm(bef_message_bool 
              ~ new_idhm
              + review_score
@@ -482,15 +484,22 @@ model <- glmer(bef_message_bool
 
 summary(model)
 
+
 # Does hdi depend on review_score? 
 
 prop.table(table(brazil_df$review_score, brazil_df$hdi_class_col), margin = 2)
 
-summary(lm(new_idhm ~ review_score + freight_issue_bool + other_issue, data = brazil_df))
+pyrex <- lm(log(new_idhm) 
+            ~ review_score 
+            + freight_issue_bool 
+            + other_issue, 
+            data = brazil_df)
+ols_plot_resid_qq(pyrex)
+plot(pyrex)
+plot(cooks.distance(pyrex))
 
 
 hi <- aov(log(new_idhm) ~ review_score, data = brazil_df)
-
 plot(hi, 2)
   
 hi_bye <- aov(new_idhm ~ freight_issue_bool, data = brazil_df)  
@@ -924,3 +933,206 @@ mean(predicted.classes == test$bef_message_bool)
 fitted.results <- predict(fit_single_logit,
                           newdata = test)
 fitted.results
+
+
+
+# Heckmann -------------------------------------------------------------------
+
+
+myprobit    <- probit(lfp ~ age + I(age^2) + faminc + kids + educ - 1, x = TRUE, 
+                      iterlim = 30, data=Mroz87)
+
+imrData     <- invMillsRatio(myprobit) # same as yours in this particular case
+Mroz87$IMR1 <- imrData$IMR1
+
+outeqn1     <- lm(wage ~ -1 + exper + I(exper^2) + educ + city + IMR1, 
+                  data=Mroz87, subset=(lfp==1))
+
+
+
+# Variable that doesn't affect length but that does affect the other
+
+
+
+truncated <- brazil_df[brazil_df$bef_nchar > 0,]
+library(MASS)
+m1 <- glm.nb(bef_nchar ~ new_idhm + region + review_score, data = truncated)
+
+
+m1_residuals <- residuals(m1)
+
+
+qqnorm(m1_residuals, pch = 1, frame = FALSE)
+qqline(m1_residuals, col = "steelblue", lwd = 2)
+
+residuals(m1)
+
+
+
+
+
+
+
+
+
+
+
+
+# Current best version
+heckman <- selection(selection = bef_message_bool 
+                     ~ region
+                     + review_score
+                     + new_idhm
+                     + year
+                     + new_urbanity
+                     + new_young_ratio
+                     + experience_goods
+                     + intimate_goods
+                     + item_count_disc
+                     + review_sent_dow
+                     + region*above_median, 
+                     
+                     outcome = log(bef_nchar)
+                     ~ region
+                     + review_score
+                     + new_idhm
+                     + year
+                     + new_urbanity
+                     + new_young_ratio
+                     + experience_goods
+                     + intimate_goods
+                     + item_count_disc
+                     + region*above_median,
+                     data = brazil_df, method = "2step")
+summary(heckman)
+out_residuals <- residuals(heckman, part = "outcome")
+
+nona_residuals <- out_residuals[!is.na(out_residuals)]
+
+qqnorm(nona_residuals, pch = 1, frame = FALSE)
+qqline(nona_residuals, col = "steelblue", lwd = 2)
+
+hist(nona_residuals)
+
+
+hist(sqrt(brazil_df[brazil_df$bef_nchar > 0,]$bef_nwords))
+
+
+qqPlot(nona_residuals)
+
+
+
+
+heckman$coefficients
+plot(heckman$invMillsRatio)
+
+heckman$invMillsRatio
+
+millies <- heckman$invMillsRatio
+
+length(millies[millies > 0.7])
+
+
+data_tjes <- heckman$param
+data_tjes
+
+
+
+data("Mroz87")
+Mroz87$kids <- (Mroz87$kids5 + Mroz87$kids618 > 0) # Like bef message bool 
+
+
+
+# Heckman
+heckman <- selection(selection = lfp 
+                     ~ age 
+                     + I(age^2) 
+                     + faminc 
+                     + kids 
+                     + educ,
+                     
+                     outcome = wage 
+                     ~ exper 
+                     + I(exper^2) 
+                     + educ 
+                     + city, 
+                     data = Mroz87, method = "2step")
+summary(heckman)
+
+# Manual 
+seleqn1 <- glm(lfp 
+               ~ age 
+               + I(age^2) 
+               + faminc 
+               + kids 
+               + educ, 
+               family=binomial(link="probit"), data=Mroz87)
+summary(seleqn1)
+
+# Calculate inverse Mills ratio by hand ##
+Mroz87$IMR <- dnorm(seleqn1$linear.predictors)/pnorm(seleqn1$linear.predictors)
+
+# Outcome equation correcting for selection ## ==> correct estimates, wrong SEs
+outeqn1 <- lm(wage 
+              ~ exper 
+              + I(exper^2) 
+              + educ 
+              + city 
+              + IMR, 
+              data=Mroz87, subset=(lfp==1))
+summary(outeqn1)
+
+
+
+Mroz87$kids <- (Mroz87$kids5 + Mroz87$kids618 > 0) # Like bef message bool 
+
+
+
+
+
+
+# -----------
+heckman <- selection(selection = lfp 
+                     ~ age 
+                     + I(age^2) 
+                     + faminc 
+                     + kids 
+                     + educ,
+                     
+                     outcome = wage 
+                     ~ exper 
+                     + I(exper^2) 
+                     + educ 
+                     + city, 
+                     data = Mroz87, method = "2step")
+summary(heckman)
+
+
+data("Mroz87")
+
+# Correct way
+myprobit    <- probit(lfp ~ 
+                        age + 
+                        I(age^2) + 
+                        faminc + 
+                        kids + 
+                        educ - 1, 
+                      x = TRUE, 
+                      iterlim = 30, 
+                      data=Mroz87)
+summary(myprobit)
+
+imrData     <- invMillsRatio(myprobit) # same as yours in this particular case
+Mroz87$IMR1 <- imrData$IMR1
+
+outeqn1     <- lm(wage 
+                  ~ -1 
+                  + exper 
+                  + I(exper^2) 
+                  + educ 
+                  + city 
+                  + IMR1, 
+                  data=Mroz87, subset=(lfp==1))
+summary(outeqn1)
+
+
