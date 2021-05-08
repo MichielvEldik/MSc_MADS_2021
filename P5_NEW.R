@@ -78,10 +78,69 @@ brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
 brazil_df$max_price <- center_scale(brazil_df$max_price)
 
 
-# Get order right ----
+# Get order right ------------------------------------------------------------- #
 
 brazil_df <- brazil_df %>%
-  mutate(hdi_class_col = factor(hdi_class_col, levels = c("low_medium", "high", "very high")))
+  mutate(hdi_class_col = factor(hdi_class_col, levels = c("low_medium", 
+                                                          "high", 
+                                                          "very high")))
+
+
+# Factor type ----------------------------------------------------------------- #
+
+cols <- c("bef_message_bool",
+          "max_price_disc",
+          "item_count_disc",
+          "urbanity_disc",
+          "freight_issue_bool",
+          "review_score",
+          "north",
+          "northeast",
+          "centerwest",
+          "south",
+          "southeast",
+          "y_2016",
+          "y_2017",
+          "y_2018",
+          "year",
+          "top2box",
+          "experience_goods",
+          "search_goods",
+          "intimate_goods",
+          "review_sent_wknd",
+          "review_answer_wknd",
+          "sent_sun",
+          "sent_mon",
+          "sent_tue",
+          "sent_wed",
+          "sent_thu",
+          "sent_fri",
+          "sent_sat",
+          "title_bool",
+          "title_or_message",
+          "title_and_message",
+          "title_nor_message")
+
+brazil_df[,cols] <- lapply(brazil_df[cols], function(x) as.factor(x))
+
+brazil_df <- brazil_df %>%
+  mutate(item_count_disc = factor(item_count_disc, 
+                                  levels = c("single", "multiple", "large")))
+
+
+
+
+# Get ird of stuff ------------------------------------------------------------ #
+
+
+brazil_df <- brazil_df %>%
+  filter(order_status == "delivered")
+
+# Get rid of NA in DV
+colSums(is.na(brazil_df))
+brazil_df <- brazil_df %>%
+  filter(!is.na(bef_message_bool))
+
 
 # State counts --------------------------------------------------------------- #
 
@@ -99,12 +158,7 @@ ggplot(data  = brazil_df,
 
 mean(brazil_df$bef_message_bool)
 
-ggplot(brazil_df, aes(x = region, y = bef_message_bool))+
-  geom_bar(stat='identity', fill="forest green") 
 
-
-+
-  facet_wrap(~region)
 
 
 ggplot(data  = brazil_df,
@@ -366,7 +420,6 @@ sect <- brazil_df %>%
   select(region, hdi_class_col, message_bool)
 library(tidyr)
 
-data_long <- gather(sect, region, hdi_class_col, message_bool factor_key=TRUE)
 
 # Outliers ------------------------------------------------------------------- #
 
@@ -375,62 +428,6 @@ hist(brazil_df$max_price)
 maximum_price <- brazil_df %>%
   select(max_price)
 
-
-
-# Factor type ----------------------------------------------------------------- #
-
-cols <- c("bef_message_bool",
-          "max_price_disc",
-          "item_count_disc",
-          "urbanity_disc",
-          "freight_issue_bool",
-          "review_score",
-          "north",
-          "northeast",
-          "centerwest",
-          "south",
-          "southeast",
-          "y_2016",
-          "y_2017",
-          "y_2018",
-          "year",
-          "top2box",
-          "experience_goods",
-          "search_goods",
-          "intimate_goods",
-          "review_sent_wknd",
-          "review_answer_wknd",
-          "sent_sun",
-          "sent_mon",
-          "sent_tue",
-          "sent_wed",
-          "sent_thu",
-          "sent_fri",
-          "sent_sat",
-          "title_bool",
-          "title_or_message",
-          "title_and_message",
-          "title_nor_message")
-
-brazil_df[,cols] <- lapply(brazil_df[cols], function(x) as.factor(x))
-
-brazil_df <- brazil_df %>%
-  mutate(item_count_disc = factor(item_count_disc, 
-                                  levels = c("single", "multiple", "large")))
-
-
-
-
-# Get ird of stuff ------------------------------------------------------------ #
-
-
-brazil_df <- brazil_df %>%
-  filter(order_status == "delivered")
-
-# Get rid of NA in DV
-colSums(is.na(brazil_df))
-brazil_df <- brazil_df %>%
-  filter(!is.na(bef_message_bool))
 
 # Formula Definition ---------------------------------------------------------- #
 
