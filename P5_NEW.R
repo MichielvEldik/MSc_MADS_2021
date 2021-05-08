@@ -65,9 +65,6 @@ ggplot(brazil_df) +
   geom_boxplot(fill = "#0c4c8a") +
   theme_minimal()
 
-# State counts --------------------------------------------------------------- #
-
-
 
 # Mean centering ------------------------------------------------------------- #
 center_scale <- function(x) {
@@ -79,6 +76,297 @@ brazil_df$new_idhm <- center_scale(brazil_df$new_idhm)
 brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
 brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
 brazil_df$max_price <- center_scale(brazil_df$max_price)
+
+
+# Get order right ----
+
+brazil_df <- brazil_df %>%
+  mutate(hdi_class_col = factor(hdi_class_col, levels = c("low_medium", "high", "very high")))
+
+# State counts --------------------------------------------------------------- #
+
+ggplot(data  = brazil_df,
+       aes(x = region,
+           y = new_idhm)) + 
+  geom_violin() + 
+  stat_summary(new_idhm=mean, 
+               geom="point", 
+               shape=23, 
+               size=2)
+
+
+
+
+mean(brazil_df$bef_message_bool)
+
+ggplot(brazil_df, aes(x = region, y = bef_message_bool))+
+  geom_bar(stat='identity', fill="forest green") 
+
+
++
+  facet_wrap(~region)
+
+
+ggplot(data  = brazil_df,
+       aes(x = region,
+           y = log(new_young_ratio))) + geom_violin()
+
+ggplot(data  = brazil_df,
+       aes(x = hdi_class,
+           y = log(new_young_ratio))) + geom_violin()
+
+
+
+prop.table(table(brazil_df[brazil_df$region == "north" ,]$bef_message_bool, 
+      brazil_df[brazil_df$region == "north" ,]$hdi_class_col), margin = 2)
+
+
+prop.table(table(brazil_df[brazil_df$region == "south" ,]$bef_message_bool, 
+                 brazil_df[brazil_df$region == "south" ,]$hdi_class_col), margin = 2)
+
+prop.table(table(brazil_df[brazil_df$region == "southeast" ,]$bef_message_bool, 
+                 brazil_df[brazil_df$region == "southeast" ,]$hdi_class_col), margin = 1)
+
+
+mean(brazil_df[brazil_df$region == "southeast",]$bef_message_bool)
+mean(brazil_df[brazil_df$region == "north",]$bef_message_bool)
+mean(brazil_df[brazil_df$region == "south",]$bef_message_bool)
+mean(brazil_df[brazil_df$region == "centerwest",]$bef_message_bool)
+mean(brazil_df[brazil_df$region == "northeast",]$bef_message_bool)
+
+
+mean(brazil_df[brazil_df$region == "south",]$new_idhm)
+mean(brazil_df[brazil_df$region == "north",]$new_idhm)
+mean(brazil_df[brazil_df$region == "centerwest",]$new_idhm)
+mean(brazil_df[brazil_df$region == "southeast",]$new_idhm)
+
+mean(as.integer(brazil_df$bef_message_bool))
+
+dfr_prop <- brazil_df %>% 
+  count(region, hdi_class_col, message_bool) %>%          
+  mutate(prop = prop.table(n)) 
+
+hoi <- as.data.frame(dfr_prop)
+
+gg_prop <- ggplot(data = hoi
+                  , aes(x = hdi_class_col, y = prop, fill = message_bool)) + 
+  geom_bar(stat = 'identity', 
+           position = 'dodge', 
+           alpha = 2/3) +
+  facet_wrap(~region, scales = "free")
+
+gg_prop
+ 
+
+specie <- c(rep("sorgho" , 3) , rep("poacee" , 3) , rep("banana" , 3) , rep("triticum" , 3) )
+condition <- rep(c("normal" , "stress" , "Nitrogen") , 4)
+value <- abs(rnorm(12 , 0 , 15))
+data <- data.frame(specie,condition,value)
+
+# Stacked
+ggplot(data, aes(fill=condition, y=value, x=specie)) + 
+  geom_bar(position="stack", stat="identity")
+  
+  
+# Try new
+
+pop <- brazil_df %>% 
+  count(region, hdi_class_col, message_bool)
+
+
+
+# ________________ THIS IS THE GOOD STUFF_______________________________________
+pop <- brazil_df %>%
+  group_by(region, hdi_class_col, bef_message_bool) %>%
+  select(region, hdi_class_col, bef_message_bool) %>%
+  summarise(n = n())
+
+ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) + 
+  geom_bar(position="stack", stat="identity") +
+  facet_wrap( ~ region, scales = "free")
+
+
+ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) + 
+  geom_bar(position="fill", stat="identity") +
+  facet_wrap( ~ region, scales = "free") 
+
+
+
+zero_low <- sum(pop[pop$hdi_class_col == "low_medium" & pop$bef_message_bool == 0,]$n)
+zero_high <- sum(pop[pop$hdi_class_col == "high" & pop$bef_message_bool == 0,]$n)
+zero_veryhigh <- sum(pop[pop$hdi_class_col == "very high" & pop$bef_message_bool == 0,]$n)
+
+one_low <- sum(pop[pop$hdi_class_col == "low_medium" & pop$bef_message_bool == 1,]$n)
+one_high <- sum(pop[pop$hdi_class_col == "high" & pop$bef_message_bool == 1,]$n)
+one_veryhigh <- sum(pop[pop$hdi_class_col == "very high" & pop$bef_message_bool == 1,]$n)
+
+pop[nrow(pop)+1,] <- NA
+pop[nrow(pop)+1,] <- NA
+pop[nrow(pop)+1,] <- NA
+pop[nrow(pop)+1,] <- NA
+pop[nrow(pop)+1,] <- NA
+pop[nrow(pop)+1,] <- NA
+
+
+# Add Full dist
+# -------------
+pop <- pop %>%
+  mutate(region = as.character(region),
+         hdi_class_col = as.character(hdi_class_col),
+         bef_message_bool = as.character(bef_message_bool))
+
+pop[31:36,1] <- "full"
+pop[31:36,2] <- c("low_medium", "low_medium",
+                  "high", "high",
+                  "very high", "very high")
+pop[31:36,3] <- c("0", "1",
+                  "0", "1",
+                  "0", "1")
+pop[31:36,4] <- c(zero_low, one_low,
+                  zero_high, one_high,
+                  zero_veryhigh, one_veryhigh)
+pop <- pop %>%
+  mutate(region = as.factor(region),
+         hdi_class_col = as.factor(hdi_class_col),
+         bef_message_bool = as.factor(bef_message_bool))
+
+pop <- pop %>%
+  mutate(region = factor(region, levels = c("centerwest",
+                                            "north",
+                                            "northeast",
+                                            "south",
+                                            "southeast",
+                                            "full")),
+         hdi_class_col = factor(hdi_class_col, levels = c("low_medium",
+                                                   "high",
+                                                   "very high")))
+
+
+to_go <- c(2,
+           4,
+           6,
+           8,
+           10,
+           12,
+           14,
+           16,
+           18,
+           20,
+           22,
+           24,
+           26,
+           28,
+           30,
+           32,
+           34,
+           36)
+
+new_vec <- rep("0", length(to_go))
+
+counter <- 1
+for (i in to_go){
+  outcome <- pop[i,"n"] / (pop[i,"n"] +  pop[i-1,"n"])
+  new_vec[counter] <- outcome
+  counter <- counter + 1
+}
+
+round(new_vec[[2]], digits = 2)
+
+test <- c("", as.character(round(new_vec[[1]], digits = 2)),
+          "", as.character(round(new_vec[[2]], digits = 2)),
+          "", as.character(round(new_vec[[3]], digits = 2)),
+          "", as.character(round(new_vec[[4]], digits = 2)),
+          "", as.character(round(new_vec[[5]], digits = 2)),
+          "", as.character(round(new_vec[[6]], digits = 2)),
+          "", as.character(round(new_vec[[7]], digits = 2)),
+          "", as.character(round(new_vec[[8]], digits = 2)),
+          "", as.character(round(new_vec[[9]], digits = 2)),
+          "", as.character(round(new_vec[[10]], digits = 2)),
+          "", as.character(round(new_vec[[11]], digits = 2)),
+          "", as.character(round(new_vec[[12]], digits = 2)),
+          "", as.character(round(new_vec[[13]], digits = 2)),
+          "", as.character(round(new_vec[[14]], digits = 2)),
+          "", as.character(round(new_vec[[15]], digits = 2)),
+          "", as.character(round(new_vec[[16]], digits = 2)),
+          "", as.character(round(new_vec[[17]], digits = 2)),
+          "", as.character(round(new_vec[[18]], digits = 2)))
+
+# Do visual again
+ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) + 
+  geom_bar(position="stack", stat="identity") +
+  geom_text(size = 3, aes(label = test, family = "serif"), vjust = -1) + 
+  ylab("count (n)") +
+  xlab("Human Development Index Category") +
+  theme(text=element_text(size=11,  family="serif")) +
+  facet_wrap( ~ region, 
+              scales = "free",
+              labeller =labeller(region = c(
+                "centerwest" = "centerwest (n = 3,537)",
+                "north" = "north (n = 1,779)",
+                "northeast" = "northeast (n = 8,996)",
+                "south" = "south (n = 13,736)",
+                "southeast" = "southeast (n = 64,714)",
+                "full" = "full (n = 92,762)"))) 
+
+# _____________________________________________________________________________
+
+library(glmmTMB)
+
+  geom_text(stat = 'count',
+            position = position_dodge(.9), 
+            vjust = -0.5, 
+            size = 3) + 
+  scale_y_continuous(labels = scales::percent) + 
+  labs(x = 'cyl', y = 'pct', fill = 'gear')
+
+
+ggplot(pop, 
+       aes(fill=message_bool, 
+           y=n, 
+           x=hdi_class_col)) + 
+  geom_bar(position="fill",  stat="bin")
+
+geom_text(stat = 'count',
+          position = position_dodge(.9), 
+          vjust = -0.5, 
+          size = 3) + 
+  scale_y_continuous(labels = scales::percent) + 
+  labs(x = 'cyl', y = 'pct', fill = 'gear')
+  
+
+
+ggplot(pop, aes(y = n, message_bool)) + geom_bar()
+
+
+library(car)
+
+ggplot(mtcars, aes(factor(cyl), fill = factor(vs))) +
+  geom_bar()
+
+ggplot(brazil_df, aes(hdi_class_col, ), fill = bef_message_bool) +
+  geom_bar(position="fill", stat="identity")
+
+
+
+ggplot(data, aes(fill=condition, y=value, x=specie)) + 
+  geom_bar(position="fill", stat="identity")
+
+
+
+
+specie <- c(rep("sorgho" , 3) , rep("poacee" , 3) , rep("banana" , 3) , rep("triticum" , 3) )
+condition <- rep(c("normal" , "stress" , "Nitrogen") , 4)
+value <- abs(rnorm(12 , 0 , 15))
+data <- data.frame(specie,condition,value)
+
+
+
+
+sect <- brazil_df %>%
+  select(region, hdi_class_col, message_bool)
+library(tidyr)
+
+data_long <- gather(sect, region, hdi_class_col, message_bool factor_key=TRUE)
 
 # Outliers ------------------------------------------------------------------- #
 
@@ -201,8 +489,9 @@ main_citystate <- paste(dv_var,
                           sep = " + "), 
                         sep = " ~ ")
 
-
-main_sing <- paste(dv_var, paste(iv_var, collapse =  " + "), sep = " ~ ")
+main_sing <- paste(dv_var, 
+                   paste(iv_var, collapse =  " + "), 
+                   sep = " ~ ")
 
 random_eff_citystate <- paste(dv_var,
                               paste(
@@ -218,7 +507,6 @@ random_eff_city <- paste(dv_var,
                            sep = " + "
                          ), sep = " ~ ")
 
-
 random_eff_city_2 <- paste(dv_var,
                            paste(
                              paste(iv_var_int, collapse = " + "),
@@ -232,6 +520,7 @@ random_eff_city_3 <- paste(dv_var,
                              city_ram_3,
                              sep = " + "
                            ), sep = " ~ ")
+
 
 
 
@@ -261,7 +550,7 @@ logit_function <- function(formu_la, dat_a)
 
 # Fit models ------------------------------------------------------------------ #
 
-# Single models
+# Single model
 # -------------
 fit_single_logit <- glm(main_sing,
                              data = brazil_df,
@@ -271,9 +560,14 @@ AIC(fit_single_logit)
 
 
 
+# fit on customer city
+# --------------------
 fit_city <- me_function(main_city, brazil_df)
 summary(fit_city)
 AIC(fit_city)
+
+
+
 
 
 fit_single_logit <- glm(main_sing,
@@ -281,6 +575,8 @@ fit_single_logit <- glm(main_sing,
                         family = binomial(link = "logit"))
 
 summary(fit_single_logit)
+
+
 
 anova(fit_city, fit_single_logit)
 
@@ -380,6 +676,10 @@ validation_function <- function(fitted_model, test_set, multilevel, probability)
   
   return(hit_rate)
 }
+
+# Good tutorial
+# https://www.youtube.com/watch?v=6MexZiX-2W8
+# --------------------------------------------
 
 # No random effects at all
 # ------------------------
