@@ -66,18 +66,6 @@ ggplot(brazil_df) +
   theme_minimal()
 
 
-# Mean centering ------------------------------------------------------------- #
-center_scale <- function(x) {
-  scale(x, scale = TRUE)
-}
-
-# apply it
-brazil_df$new_idhm <- center_scale(brazil_df$new_idhm)
-brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
-brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
-brazil_df$max_price <- center_scale(brazil_df$max_price)
-
-
 # Get order right ------------------------------------------------------------- #
 
 brazil_df <- brazil_df %>%
@@ -361,6 +349,18 @@ ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) +
                 "south" = "south (n = 13,736)",
                 "southeast" = "southeast (n = 64,714)",
                 "full" = "full (n = 92,762)"))) 
+
+
+# Mean centering ------------------------------------------------------------- #
+center_scale <- function(x) {
+  scale(x, scale = TRUE)
+}
+
+# apply it
+brazil_df$new_idhm <- center_scale(brazil_df$new_idhm)
+brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
+brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
+brazil_df$max_price <- center_scale(brazil_df$max_price)
 
 # _____________________________________________________________________________
 
