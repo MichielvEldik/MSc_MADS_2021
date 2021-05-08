@@ -6,12 +6,11 @@ library(ggplot2)
 library(lme4)
 library(tictoc)
 
-
 # Load data ------------------------------------------------------------------ #
 input <- read.csv("full_geomerged_df_5.csv")
 brazil_df <- input
 
-# Descriptives continuous ---------------------------------------------------- #
+# Descriptives continuous (before scaling) ----------------------------------- #
 
 # New_IDHM
 # --------
@@ -61,18 +60,9 @@ maxprice_histogram <- ggplot(
 plot(maxprice_histogram)
 
 ggplot(brazil_df) +
-  aes(x = "", y = max_price) +
+  aes(x = "", y = log(max_price)) +
   geom_boxplot(fill = "#0c4c8a") +
   theme_minimal()
-
-
-# Get order right ------------------------------------------------------------- #
-
-brazil_df <- brazil_df %>%
-  mutate(hdi_class_col = factor(hdi_class_col, levels = c("low_medium", 
-                                                          "high", 
-                                                          "very high")))
-
 
 # Factor type ----------------------------------------------------------------- #
 
@@ -111,16 +101,20 @@ cols <- c("bef_message_bool",
 
 brazil_df[,cols] <- lapply(brazil_df[cols], function(x) as.factor(x))
 
+
+# Fix order 
 brazil_df <- brazil_df %>%
   mutate(item_count_disc = factor(item_count_disc, 
                                   levels = c("single", "multiple", "large")))
-
-
-
+# fix order
+brazil_df <- brazil_df %>%
+  mutate(hdi_class_col = factor(hdi_class_col, levels = c("low_medium", 
+                                                          "high", 
+                                                          "very high")))
 
 # Get ird of stuff ------------------------------------------------------------ #
 
-
+# only keep delivered ones
 brazil_df <- brazil_df %>%
   filter(order_status == "delivered")
 
@@ -130,7 +124,20 @@ brazil_df <- brazil_df %>%
   filter(!is.na(bef_message_bool))
 
 
-# State counts --------------------------------------------------------------- #
+# -- Check: how many people have more than 2? ---------------------------------# 
+
+more_than_2 <- brazil_df %>% 
+  group_by(customer_unique_id) %>% 
+  summarise(count = n())
+
+more_than_2 <- more_than_2 %>% 
+  mutate(two_or_one = ifelse(count >2, 0, 1), 
+         one = ifelse(count == 1, 1, 0))
+
+mean(more_than_2$two_or_one)
+mean(more_than_2$one)
+
+# Data Discriptives  -------------------------------------------------------- #
 
 ggplot(data  = brazil_df,
        aes(x = region,
@@ -169,13 +176,12 @@ prop.table(table(brazil_df[brazil_df$region == "south" ,]$bef_message_bool,
 prop.table(table(brazil_df[brazil_df$region == "southeast" ,]$bef_message_bool, 
                  brazil_df[brazil_df$region == "southeast" ,]$hdi_class_col), margin = 1)
 
-
+# Getting some general insights on message_bool (has to be int though)
 mean(brazil_df[brazil_df$region == "southeast",]$bef_message_bool)
 mean(brazil_df[brazil_df$region == "north",]$bef_message_bool)
 mean(brazil_df[brazil_df$region == "south",]$bef_message_bool)
 mean(brazil_df[brazil_df$region == "centerwest",]$bef_message_bool)
 mean(brazil_df[brazil_df$region == "northeast",]$bef_message_bool)
-
 
 mean(brazil_df[brazil_df$region == "south",]$new_idhm)
 mean(brazil_df[brazil_df$region == "north",]$new_idhm)
@@ -184,40 +190,7 @@ mean(brazil_df[brazil_df$region == "southeast",]$new_idhm)
 
 mean(as.integer(brazil_df$bef_message_bool))
 
-dfr_prop <- brazil_df %>% 
-  count(region, hdi_class_col, message_bool) %>%          
-  mutate(prop = prop.table(n)) 
-
-hoi <- as.data.frame(dfr_prop)
-
-gg_prop <- ggplot(data = hoi
-                  , aes(x = hdi_class_col, y = prop, fill = message_bool)) + 
-  geom_bar(stat = 'identity', 
-           position = 'dodge', 
-           alpha = 2/3) +
-  facet_wrap(~region, scales = "free")
-
-gg_prop
- 
-
-specie <- c(rep("sorgho" , 3) , rep("poacee" , 3) , rep("banana" , 3) , rep("triticum" , 3) )
-condition <- rep(c("normal" , "stress" , "Nitrogen") , 4)
-value <- abs(rnorm(12 , 0 , 15))
-data <- data.frame(specie,condition,value)
-
-# Stacked
-ggplot(data, aes(fill=condition, y=value, x=specie)) + 
-  geom_bar(position="stack", stat="identity")
-  
-  
-# Try new
-
-pop <- brazil_df %>% 
-  count(region, hdi_class_col, message_bool)
-
-
-
-# ________________ THIS IS THE GOOD STUFF_______________________________________
+# Creating the big table ------------------------------------------------------
 pop <- brazil_df %>%
   group_by(region, hdi_class_col, bef_message_bool) %>%
   select(region, hdi_class_col, bef_message_bool) %>%
@@ -231,8 +204,6 @@ ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) +
 ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) + 
   geom_bar(position="fill", stat="identity") +
   facet_wrap( ~ region, scales = "free") 
-
-
 
 zero_low <- sum(pop[pop$hdi_class_col == "low_medium" & pop$bef_message_bool == 0,]$n)
 zero_high <- sum(pop[pop$hdi_class_col == "high" & pop$bef_message_bool == 0,]$n)
@@ -282,8 +253,6 @@ pop <- pop %>%
          hdi_class_col = factor(hdi_class_col, levels = c("low_medium",
                                                    "high",
                                                    "very high")))
-
-
 to_go <- c(2,
            4,
            6,
@@ -314,32 +283,33 @@ for (i in to_go){
 
 round(new_vec[[2]], digits = 2)
 
-test <- c("", as.character(round(new_vec[[1]], digits = 2)),
-          "", as.character(round(new_vec[[2]], digits = 2)),
-          "", as.character(round(new_vec[[3]], digits = 2)),
-          "", as.character(round(new_vec[[4]], digits = 2)),
-          "", as.character(round(new_vec[[5]], digits = 2)),
-          "", as.character(round(new_vec[[6]], digits = 2)),
-          "", as.character(round(new_vec[[7]], digits = 2)),
-          "", as.character(round(new_vec[[8]], digits = 2)),
-          "", as.character(round(new_vec[[9]], digits = 2)),
-          "", as.character(round(new_vec[[10]], digits = 2)),
-          "", as.character(round(new_vec[[11]], digits = 2)),
-          "", as.character(round(new_vec[[12]], digits = 2)),
-          "", as.character(round(new_vec[[13]], digits = 2)),
-          "", as.character(round(new_vec[[14]], digits = 2)),
-          "", as.character(round(new_vec[[15]], digits = 2)),
-          "", as.character(round(new_vec[[16]], digits = 2)),
-          "", as.character(round(new_vec[[17]], digits = 2)),
-          "", as.character(round(new_vec[[18]], digits = 2)))
+test <- c("", paste(as.character(round(new_vec[[1]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[2]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[3]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[4]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[5]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[6]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[7]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[8]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[9]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[10]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[11]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[12]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[13]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[14]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[15]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[16]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[17]], digits = 2)), "%", sep = ""),
+          "", paste(as.character(round(new_vec[[18]], digits = 2)), "%", sep = ""))
 
 # Do visual again
 ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) + 
   geom_bar(position="stack", stat="identity") +
-  geom_text(size = 3, aes(label = test, family = "serif"), vjust = -1) + 
+  geom_text(size = 3.3, aes(label = test, family = "serif"), vjust = -1) + 
   ylab("count (n)") +
+  theme_bw() +
   xlab("Human Development Index Category") +
-  theme(text=element_text(size=11,  family="serif")) +
+  theme(text=element_text(size=13,  family="serif")) +
   facet_wrap( ~ region, 
               scales = "free",
               labeller =labeller(region = c(
@@ -351,6 +321,181 @@ ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) +
                 "full" = "full (n = 92,762)"))) 
 
 
+# Define train and test sets -------------------------------------------------- #
+
+# 75% of the sample size
+train_size <- floor(0.75 * nrow(brazil_df))
+
+set.seed(777)
+train_ind <- sample(seq_len(nrow(brazil_df)), size = train_size)
+
+train <- brazil_df[train_ind, ]
+test <- brazil_df[-train_ind, ]
+
+colSums(is.na(test))
+colSums(is.na(train))
+
+# Validation function definition --------------------------------------------- #
+
+validation_function <- function(fitted_model, test_set, multilevel, probability){
+  if (multilevel == 1)
+  {
+    probabilities <- fitted_model %>% predict(test_set, 
+                                              type = "response",
+                                              allow.new.levels = TRUE)
+  } 
+  else 
+  {
+    probabilities <- fitted_model %>% predict(test_set, 
+                                              type = "response",
+                                              allow.new.levels = FALSE)
+  }
+  # Perform classification based on probability
+  predicted.classes <- ifelse(probabilities > probability, 1, 0)
+  predicted.classes
+  
+  # bind 
+  probies <- cbind(as.character(test_set$bef_message_bool), predicted.classes)
+  probies <- as.data.frame(probies)
+  
+  probies <- probies %>%
+    mutate(true_positives = ifelse(V1 == "1" & predicted.classes == "1", 1, 0),
+           true_negatives = ifelse(V1 == "0" & predicted.classes == "0", 1, 0),
+           false_positives = ifelse(V1 == "0" & predicted.classes == "1", 1, 0),
+           false_negatives = ifelse(V1 == "1" & predicted.classes == "0", 1, 0),
+           hit_rate = ifelse(true_positives == "1" | true_negatives == "1", 1, 0)
+    )
+  
+  # Compute hitrate
+  hit_rate <- mean(probies$hit_rate, na.rm = TRUE)
+  
+  return(hit_rate)
+}
+
+
+# Check for linearity assumption --------------------------------------------- #
+
+lin_assum_func <- function(variable_name){
+  dv_var <- "bef_message_bool"
+  iv_var <- variable_name
+  form <- paste(dv_var, iv_var, sep = "~")
+  
+  
+  
+  fit_1 <- glm(bef_message_bool ~ variable_name,
+               data = train, 
+               family = binomial(link = "logit"))
+  
+  data_tjes <- fit_1$model[2]
+  probies <- predict(fit_1, type =  "response")
+  logies <- log(probies / (1 - probies))
+  
+  beidies <- cbind(data_tjes, logies)
+  
+  plot(beidies$variable_name ~ jitter(beidies$logies, 4))
+  
+}
+
+
+lin_assum_func('max_price')
+
+
+###
+
+main_sing
+
+
+brazil_pos <- brazil_df[brazil_df$review_score == 4 | brazil_df$review_score == 5 | brazil_df$review_score == 3,]
+brazil_neg <- brazil_df[brazil_df$review_score == 1 | brazil_df$review_score == 2,]
+brazil_north <- 
+
+fit_1 <- glm(bef_message_bool 
+             ~ new_idhm
+             + review_score
+             + region
+             + new_young_ratio
+             + above_median
+             + new_urbanity,
+             data = test, 
+             family = binomial(link = "logit"))
+
+summary(fit_1)
+data_tjes <- fit_1$model["new_young_ratio"]
+probies <- predict(fit_1, type =  "response")
+logies <- log(probies / (1 - probies))
+
+beidies <- cbind(data_tjes, logies)
+
+plot(beidies[,1] ~ jitter(beidies$logies, 4))
+
+
+
+
+brazil_df <- brazil_df %>%
+  mutate(quantiles_idhm = ntile(new_idhm, 8),
+         quantiles_idhm = as.factor(quantiles_idhm))
+
+fit_1 <- glm(bef_message_bool ~ quantiles_idhm,
+             data = brazil_df, family = binomial(link = "logit"))
+
+
+
+
+summary(fit_1)
+cofs <- summary(fit_1)$coefficients[2:8,1]
+plot(cofs)
+
+
+# try glmer
+model <- glmer(bef_message_bool 
+               ~ new_idhm
+               + region
+               + new_young_ratio
+               + above_median
+               + review_score
+               + (1 | customer_city),
+               family = binomial(link = "logit"),
+               data = brazil_pos,
+               control = glmerControl(
+                 optimizer = "bobyqa", 
+                 optCtrl = list(maxfun=2e5)))
+
+summary(model)
+
+data_tjes <- fit_1$model["new_young_ratio"]
+
+
+model <- glmer(bef_message_bool 
+               ~ new_idhm
+               + region
+               + new_young_ratio
+               + above_median
+               + review_score
+               + intimate_goods
+               + experience_goods
+               + (1 | customer_city),
+               family = binomial(link = "logit"),
+               data = brazil_neg,
+               control = glmerControl(
+                 optimizer = "bobyqa", 
+                 optCtrl = list(maxfun=2e5)))
+
+summary(model)
+
+# Does hdi depend on review_score? 
+
+prop.table(table(brazil_df$review_score, brazil_df$hdi_class_col), margin = 2)
+
+summary(lm(new_idhm ~ review_score + freight_issue_bool + other_issue, data = brazil_df))
+
+
+hi <- aov(log(new_idhm) ~ review_score, data = brazil_df)
+
+plot(hi, 2)
+  
+hi_bye <- aov(new_idhm ~ freight_issue_bool, data = brazil_df)  
+summary(hi_bye)
+  
 # Mean centering ------------------------------------------------------------- #
 center_scale <- function(x) {
   scale(x, scale = TRUE)
@@ -362,71 +507,57 @@ brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
 brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
 brazil_df$max_price <- center_scale(brazil_df$max_price)
 
-# _____________________________________________________________________________
-
-library(glmmTMB)
-
-  geom_text(stat = 'count',
-            position = position_dodge(.9), 
-            vjust = -0.5, 
-            size = 3) + 
-  scale_y_continuous(labels = scales::percent) + 
-  labs(x = 'cyl', y = 'pct', fill = 'gear')
-
-
-ggplot(pop, 
-       aes(fill=message_bool, 
-           y=n, 
-           x=hdi_class_col)) + 
-  geom_bar(position="fill",  stat="bin")
-
-geom_text(stat = 'count',
-          position = position_dodge(.9), 
-          vjust = -0.5, 
-          size = 3) + 
-  scale_y_continuous(labels = scales::percent) + 
-  labs(x = 'cyl', y = 'pct', fill = 'gear')
-  
-
-
-ggplot(pop, aes(y = n, message_bool)) + geom_bar()
-
-
-library(car)
-
-ggplot(mtcars, aes(factor(cyl), fill = factor(vs))) +
-  geom_bar()
-
-ggplot(brazil_df, aes(hdi_class_col, ), fill = bef_message_bool) +
-  geom_bar(position="fill", stat="identity")
-
-
-
-ggplot(data, aes(fill=condition, y=value, x=specie)) + 
-  geom_bar(position="fill", stat="identity")
-
-
-
-
-specie <- c(rep("sorgho" , 3) , rep("poacee" , 3) , rep("banana" , 3) , rep("triticum" , 3) )
-condition <- rep(c("normal" , "stress" , "Nitrogen") , 4)
-value <- abs(rnorm(12 , 0 , 15))
-data <- data.frame(specie,condition,value)
-
-
-
-
-sect <- brazil_df %>%
-  select(region, hdi_class_col, message_bool)
-library(tidyr)
-
-
 # Outliers ------------------------------------------------------------------- #
 
 hist(brazil_df$max_price)
 
 maximum_price <- brazil_df %>%
   select(max_price)
+
+
+# Above median variable ------------------------------------------------------- #
+
+# Summarise per product
+cat_1 <- brazil_df %>%
+  group_by(product_category_name) %>%
+  summarise(mean = mean(max_price),
+            median = median(max_price),
+            sd = sd(max_price),
+            unique_count = unique(n()))
+# get rid of NA
+cat_1 <- cat_1[1:71,]
+# Keep only the interesting ones
+cat_1 <- cat_1 %>%
+  select(product_category_name,
+         mean, 
+         median)
+# merge with original dataframe
+brazil_df <- merge(brazil_df, cat_1,
+                    by.x = "product_category_name",
+                    by.y = "product_category_name",
+                    all.x = TRUE)
+# calculate derived variables 
+brazil_df <- brazil_df %>%
+  mutate(above_median = ifelse(max_price > median, 1, 0),
+         above_median = as.factor(above_median),
+         above_mean = ifelse(max_price > mean, 1, 0),
+         above_mean = as.factor(above_mean))
+# Check out the end product...
+table(brazil_df$above_median)
+
+str(brazil_df$above_median)
+
+
+# Numeric culture ------------------------------------------------------------- #
+
+brazil_df$individualism <- 0
+
+brazil_df <- brazil_df %>%
+  mutate(individualism = ifelse(region == "south", 6, individualism),
+         individualism = ifelse(region == "southeast", 2, individualism),
+         individualism = ifelse(region == "centerwest", 0, individualism),
+         individualism = ifelse(region == "northeast", -1, individualism),
+         individualism = ifelse(region == "north", -5, individualism))
 
 
 # Formula Definition ---------------------------------------------------------- #
@@ -443,7 +574,8 @@ iv_var <- c("review_score",
             "item_count_disc",
             "experience_goods",
             "intimate_goods",
-            "max_price"
+            "max_price",
+            "above_median"
            )
 
 iv_var_int <- c("1",
@@ -466,6 +598,8 @@ city_state_ram <- "(1 + new_idhm | customer_state) + (1 + new_idhm | customer_ci
 city_ram <- "(1 + new_idhm | customer_city)"
 city_ram_2 <- "(1 + new_idhm + new_urbanity | customer_city)"
 city_ram_3 <- "(1 + new_idhm + new_young_ratio | customer_city)"
+
+rev_score <- "(1  | customer_city) + (1 | review_score)"
 
 
 main_city <- paste(dv_var, 
@@ -518,7 +652,15 @@ random_eff_city_3 <- paste(dv_var,
                              sep = " + "
                            ), sep = " ~ ")
 
+random_eff_city_4 <- paste(dv_var,
+                           paste(
+                             paste(iv_var_int, collapse = " + "),
+                             rev_score,
+                             sep = " + "
+                           ), sep = " ~ ")
 
+
+random_eff_basic <- paste(dv_var, rev_score, sep = " ~ " )
 
 
 # Define fit function --------------------------------------------------------- #
@@ -557,6 +699,45 @@ AIC(fit_single_logit)
 
 
 
+
+
+blue_jeans <- glm(bef_message_bool 
+            ~ region
+            + review_score
+            + new_idhm
+            + year
+            + new_urbanity
+            + new_young_ratio
+            + experience_goods
+            + intimate_goods
+            + item_count_disc
+            + review_sent_dow
+            + region*above_median, 
+            data = brazil_df, family = binomial(link = "logit"))
+
+summary(blue_jeans)
+
+blue_jeans <- glm(bef_message_bool ~ region*above_median, 
+                  data = brazil_df, family = binomial(link = "logit"))
+
+summary(blue_jeans)
+
+blue_jeans_3 <- glm(bef_message_bool ~ region*above_mean, 
+                  data = brazil_df, family = binomial(link = "logit"))
+
+summary(blue_jeans_3)
+
+
+blue_jeans_2 <- glm(bef_message_bool ~ region + above_median, 
+                    data = brazil_df, family = binomial(link = "logit"))
+
+AIC(blue_jeans)
+AIC(blue_jeans_2)
+
+anova(blue_jeans, blue_jeans_2)
+
+
+
 # fit on customer city
 # --------------------
 fit_city <- me_function(main_city, brazil_df)
@@ -564,11 +745,12 @@ summary(fit_city)
 AIC(fit_city)
 
 
+fit_random <- me_function(random_eff_basic, brazil_df)
 
 
 
 fit_single_logit <- glm(main_sing,
-                        data = fit_city@frame,
+                        data = brazil_df,
                         family = binomial(link = "logit"))
 
 summary(fit_single_logit)
@@ -620,59 +802,6 @@ anova(random_eff_city, random_eff_city_3)
 
 
 # Mixed effects versus fixed effects ------------------------------------------ #
-
-
-
-# Define train and test sets -------------------------------------------------- #
-
-# 75% of the sample size
-train_size <- floor(0.75 * nrow(brazil_df))
-
-set.seed(777)
-train_ind <- sample(seq_len(nrow(brazil_df)), size = train_size)
-
-train <- brazil_df[train_ind, ]
-test <- brazil_df[-train_ind, ]
-
-colSums(is.na(test))
-colSums(is.na(train))
-
-# Validation ------------------------------------------------------------------ #
-
-validation_function <- function(fitted_model, test_set, multilevel, probability){
-  if (multilevel == 1)
-    {
-    probabilities <- fitted_model %>% predict(test_set, 
-                                              type = "response",
-                                              allow.new.levels = TRUE)
-    } 
-  else 
-  {
-    probabilities <- fitted_model %>% predict(test_set, 
-                                              type = "response",
-                                              allow.new.levels = FALSE)
-  }
-  # Perform classification based on probability
-  predicted.classes <- ifelse(probabilities > probability, 1, 0)
-  predicted.classes
-  
-  # bind 
-  probies <- cbind(as.character(test_set$bef_message_bool), predicted.classes)
-  probies <- as.data.frame(probies)
-  
-  probies <- probies %>%
-    mutate(true_positives = ifelse(V1 == "1" & predicted.classes == "1", 1, 0),
-           true_negatives = ifelse(V1 == "0" & predicted.classes == "0", 1, 0),
-           false_positives = ifelse(V1 == "0" & predicted.classes == "1", 1, 0),
-           false_negatives = ifelse(V1 == "1" & predicted.classes == "0", 1, 0),
-           hit_rate = ifelse(true_positives == "1" | true_negatives == "1", 1, 0)
-          )
-  
-  # Compute hitrate
-  hit_rate <- mean(probies$hit_rate, na.rm = TRUE)
-  
-  return(hit_rate)
-}
 
 # Good tutorial
 # https://www.youtube.com/watch?v=6MexZiX-2W8
