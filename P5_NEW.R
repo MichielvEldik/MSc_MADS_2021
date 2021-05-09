@@ -455,6 +455,21 @@ fit_hnbinom1 <- update(fit_zinbinom1_bs,
 
 
 
+
+library(glmm)
+library(glmmADMB)
+library(R2admb)
+
+# https://stats.stackexchange.com/questions/250563/r-hurdle-models-with-date-as-non-nested-random-effect
+# binairy part
+hurP1 <- glmmadmb(bef_nchar ~ new_idhm + (1 | customer_city), 
+                  data = brazil_df, family = "binomial")
+
+# truncated at 0 part
+hurP2 <- glmmadmb(value ~ product * sex * morph + (1 | Date),
+                  data = subset(data2, value > 0), family = "truncnbinom1")
+
+
 # Check for linearity assumption --------------------------------------------- #
 
 lin_assum_func <- function(variable_name){
