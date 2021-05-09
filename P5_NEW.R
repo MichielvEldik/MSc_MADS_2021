@@ -5,6 +5,7 @@ library(sjstats)
 library(ggplot2)
 library(lme4)
 library(tictoc)
+library(GLMMadaptive)
 library(glmmTMB)
 
 # Load data ------------------------------------------------------------------ #
@@ -374,6 +375,86 @@ validation_function <- function(fitted_model, test_set, multilevel, probability)
 }
 
 
+# Zero-Inflated Negative Binomial Mixed Effects Model ------------------------ #
+# https://www.r-bloggers.com/2018/08/zero-inflated-poisson-and-negative-binomial-models-with-glmmadaptive/
+
+
+
+gm1 <- mixed_model(bef_nchar ~ new_idhm, 
+                   random = ~ 1 | customer_city, 
+                   data = brazil_pos,
+                   family = zi.negative.binomial(), 
+                   zi_fixed = ~ new_idhm)
+summary(gm1)
+
+gm2 <- mixed_model(bef_nwords ~ new_idhm, 
+                   random = ~ 1 | customer_city, 
+                   data = brazil_pos,
+                   family = zi.poisson(), 
+                   zi_fixed = ~ new_idhm)
+
+summary(gm2)
+
+gm3 <- mixed_model(bef_nchar ~ new_idhm, 
+                   random = ~ 1 | customer_city, 
+                   data = brazil_df,
+                   family = hurdle.negative.binomial(), 
+                   zi_fixed = ~ new_idhm)
+
+
+summary(gm3)
+
+gm3 <- mixed_model(log(bef_nchar) ~ new_idhm, 
+                   random = ~ 1 | customer_city, 
+                   data = brazil_df,
+                   family = hurdle.lognormal(), 
+                   zi_fixed = ~ new_idhm)
+
+
+summary(gm3)
+
+
+
+hm2 <- update(gm3, zi_random = ~ 1 | customer_city)
+
+
+gm4 <- mixed_model(bef_nchar ~ new_idhm, 
+                   random = ~ 1 | customer_city, 
+                   data = brazil_pos,
+                   family = hurdle.poisson(), 
+                   zi_fixed = ~ new_idhm)
+
+
+summary(gm4)
+
+
+anova(gm1, gm2, test = FALSE)
+
+library(MASS)
+library(pscl)
+summary(m2 <- glm.nb(bef_nchar ~ new_idhm + camper, data = brazil_df))
+
+
+M4 <- zeroinfl(bef_nchar ~ new_idhm |  new_idhm,
+               dist = 'negbin',
+               data = brazil_df)
+summary(M4)
+
+M5 <- hurdle(bef_nchar ~ new_idhm |  new_idhm,
+               dist = 'negbin',
+               data = brazil_pos)
+summary(M5)
+
+
+
+
+fit_hnbinom1 <- update(fit_zinbinom1_bs,
+                       ziformula=~.,
+                       data=Owls,
+                       family=list(family="truncated_nbinom1",link="log"))
+
+
+
 # Check for linearity assumption --------------------------------------------- #
 
 lin_assum_func <- function(variable_name){
@@ -514,7 +595,7 @@ center_scale <- function(x) {
 brazil_df$new_idhm <- center_scale(brazil_df$new_idhm)
 brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
 brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
-brazil_df$max_price <- center_scale(brazil_df$max_price)
+# brazil_df$max_price <- center_scale(brazil_df$max_price)
 
 # Outliers ------------------------------------------------------------------- #
 
@@ -992,18 +1073,17 @@ heckman <- selection(selection = bef_message_bool
                      + review_sent_dow
                      + region*above_median, 
                      
-                     outcome = log(bef_nchar)
+                     outcome = bef_nchar
                      ~ region
                      + review_score
                      + new_idhm
                      + year
                      + new_urbanity
                      + new_young_ratio
-                     + experience_goods
                      + intimate_goods
                      + item_count_disc
-                     + region*above_median,
-                     data = brazil_df, method = "2step")
+                     + above_median,
+                     data = brazil_pos, method = "2step")
 summary(heckman)
 out_residuals <- residuals(heckman, part = "outcome")
 
