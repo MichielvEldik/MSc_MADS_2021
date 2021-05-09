@@ -1167,6 +1167,7 @@ summary(seleqn1)
 # Calculate inverse Mills ratio by hand ##
 Mroz87$IMR <- dnorm(seleqn1$linear.predictors)/pnorm(seleqn1$linear.predictors)
 
+
 # Outcome equation correcting for selection ## ==> correct estimates, wrong SEs
 outeqn1 <- lm(wage 
               ~ exper 
@@ -1211,14 +1212,18 @@ myprobit    <- probit(lfp ~
                         I(age^2) + 
                         faminc + 
                         kids + 
-                        educ - 1, 
+                        educ, 
                       x = TRUE, 
                       iterlim = 30, 
                       data=Mroz87)
 summary(myprobit)
 
 imrData     <- invMillsRatio(myprobit) # same as yours in this particular case
+probit_lp = predict(myprobit)
+mills0 = dnorm(probit_lp)/pnorm(probit_lp)
+
 Mroz87$IMR1 <- imrData$IMR1
+
 
 outeqn1     <- lm(wage 
                   ~ -1 
@@ -1231,3 +1236,86 @@ outeqn1     <- lm(wage
 summary(outeqn1)
 
 
+# https://m-clark.github.io/models-by-example/heckman-selection.html
+
+
+model <- glmer(formula = bef_message_bool 
+               ~ region
+               + review_score
+               + new_idhm
+               + year
+               + new_urbanity
+               + new_young_ratio
+               + experience_goods
+               + intimate_goods
+               + item_count_disc
+               + review_sent_dow
+               + (1 | customer_city),
+               family = binomial(link = "probit"),
+               data = train,
+               control = glmerControl(
+                 optimizer = "bobyqa", 
+                 optCtrl = list(maxfun=2e5))
+)
+
+summary(model)
+
+laylow <- cbind(train, probabilities)
+
+# Any differences? Don't think so....
+probit_lp = predict(model)
+probabilities <- model %>% predict(train, type = "response",allow.new.levels = TRUE)
+
+mills0 = dnorm(probit_lp)/pnorm(probit_lp) # this works correctly
+
+# Somewhat multimodal; is this a concern? 
+hist(mills0)
+
+train$mills <- mills0
+
+# How about the correlated errors between latent and non-latent?
+
+truncated <- train[train$bef_message_bool == 1,]
+
+
+simpy_glm <- lm(bef_nchar ~ new_idhm + mills, data = truncated)
+summary(simpy_glm)
+AIC(simpy_glm)
+plot(simpy_glm)
+
+m1_residuals <- residuals(simpy_glm)
+
+qqnorm(m1_residuals, pch = 1, frame = FALSE)
+qqline(m1_residuals, col = "steelblue", lwd = 2)
+hist(m1_residuals)
+
+
+library(MASS)
+simpy_glms <- glm.nb(bef_nchar ~ new_idhm + mills, data = truncated)
+AIC(simpy_glms)
+
+
+
+m1_residuals <- residuals(simpy_glms)
+
+qqnorm(m1_residuals, pch = 1, frame = FALSE)
+qqline(m1_residuals, col = "steelblue", lwd = 2)
+hist(m1_residuals)
+
+pois_glms <- glm(bef_nchar ~ new_idhm + mills, family="poisson", data=truncated)
+AIC(pois_glms)
+
+m1_residuals <- residuals(pois_glms)
+
+qqnorm(m1_residuals, pch = 1, frame = FALSE)
+qqline(m1_residuals, col = "steelblue", lwd = 2)
+
+
+
+gamma_glms <- glm(bef_nchar ~ new_idhm + mills, family="Gamma", data=truncated)
+AIC(gamma_glms)
+
+m1_residuals <- residuals(gamma_glms)
+
+qqnorm(m1_residuals, pch = 1, frame = FALSE)
+qqline(m1_residuals, col = "steelblue", lwd = 2)
