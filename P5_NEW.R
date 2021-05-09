@@ -494,7 +494,7 @@ lin_assum_func <- function(variable_name){
 }
 
 
-lin_assum_func('max_price')
+lin_assum_func('new_idhm')
 
 
 ###
@@ -512,7 +512,7 @@ fit_1 <- glm(bef_message_bool
              + review_score
              + region
              + new_young_ratio
-             + above_median
+               + above_median
              + new_urbanity,
              data = test, 
              family = binomial(link = "logit"))
@@ -1235,8 +1235,8 @@ outeqn1     <- lm(wage
                   data=Mroz87, subset=(lfp==1))
 summary(outeqn1)
 
-
-# https://m-clark.github.io/models-by-example/heckman-selection.html
+# THE SHIT 
+# https://m-clark.github.io/models-by-example/heckman-selection.html --------- #
 
 
 model <- glmer(formula = bef_message_bool 
@@ -1252,7 +1252,7 @@ model <- glmer(formula = bef_message_bool
                + review_sent_dow
                + (1 | customer_city),
                family = binomial(link = "probit"),
-               data = train,
+               data = brazil_df,
                control = glmerControl(
                  optimizer = "bobyqa", 
                  optCtrl = list(maxfun=2e5))
@@ -1260,28 +1260,32 @@ model <- glmer(formula = bef_message_bool
 
 summary(model)
 
-laylow <- cbind(train, probabilities)
-
-# Any differences? Don't think so....
+# both of these are the same but we go with predict()
 probit_lp = predict(model)
-probabilities <- model %>% predict(train, type = "response",allow.new.levels = TRUE)
+#probabilities <- model %>% predict(train, type = "response",allow.new.levels = TRUE)
 
 mills0 = dnorm(probit_lp)/pnorm(probit_lp) # this works correctly
 
 # Somewhat multimodal; is this a concern? 
 hist(mills0)
 
-train$mills <- mills0
+brazil_df$mills <- mills0
 
 # How about the correlated errors between latent and non-latent?
 
-truncated <- train[train$bef_message_bool == 1,]
+# Truncated fsys 
+truncated <- brazil_df[brazil_df$bef_message_bool == 1,]
 
 
 simpy_glm <- lm(bef_nchar ~ new_idhm + mills, data = truncated)
 summary(simpy_glm)
 AIC(simpy_glm)
 plot(simpy_glm)
+
+
+
+
+
 
 m1_residuals <- residuals(simpy_glm)
 
@@ -1319,3 +1323,22 @@ m1_residuals <- residuals(gamma_glms)
 
 qqnorm(m1_residuals, pch = 1, frame = FALSE)
 qqline(m1_residuals, col = "steelblue", lwd = 2)
+
+
+
+heckman <- selection(selection = bef_message_bool 
+                     ~ region
+                     + review_score
+                     + new_idhm
+                     + year
+                     + new_urbanity
+                     + new_young_ratio
+                     + experience_goods
+                     + intimate_goods
+                     + item_count_disc
+                     + review_sent_dow, 
+                     
+                     outcome = bef_nchar
+                     ~ new_idhm,
+                     data = brazil_pos, method = "2step")
+summary(heckman)
