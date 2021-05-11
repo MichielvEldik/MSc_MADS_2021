@@ -7,7 +7,7 @@ library(lme4)
 library(tictoc)
 library(GLMMadaptive)
 library(glmmTMB)
-
+library(stargazer)
 # Load data ------------------------------------------------------------------ #
 input <- read.csv("full_geomerged_df_5.csv")
 brazil_df <- input
@@ -124,6 +124,61 @@ brazil_df <- brazil_df %>%
 colSums(is.na(brazil_df))
 brazil_df <- brazil_df %>%
   filter(!is.na(bef_message_bool))
+
+# Mean centering ------------------------------------------------------------- #
+center_scale <- function(x) {
+  scale(x, scale = TRUE)
+}
+
+# apply it
+brazil_df$new_idhm <- center_scale(brazil_df$new_idhm)
+brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
+brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
+# brazil_df$max_price <- center_scale(brazil_df$max_price)
+
+# Outliers ------------------------------------------------------------------- #
+
+hist(brazil_df$max_price)
+
+maximum_price <- brazil_df %>%
+  select(max_price)
+
+
+# Above median variable ------------------------------------------------------- #
+
+# Summarise per product
+cat_1 <- brazil_df %>%
+  group_by(product_category_name) %>%
+  summarise(mean = mean(max_price),
+            median = median(max_price),
+            sd = sd(max_price),
+            unique_count = unique(n()))
+# get rid of NA
+cat_1 <- cat_1[1:71,]
+# Keep only the interesting ones
+cat_1 <- cat_1 %>%
+  select(product_category_name,
+         mean, 
+         median)
+# merge with original dataframe
+brazil_df <- merge(brazil_df, cat_1,
+                   by.x = "product_category_name",
+                   by.y = "product_category_name",
+                   all.x = TRUE)
+# calculate derived variables 
+brazil_df <- brazil_df %>%
+  mutate(above_median = ifelse(max_price > median, 1, 0),
+         above_median = as.factor(above_median),
+         above_mean = ifelse(max_price > mean, 1, 0),
+         above_mean = as.factor(above_mean))
+# Check out the end product...
+table(brazil_df$above_median)
+
+str(brazil_df$above_median)
+
+
+
+
 
 
 # -- Check: how many people have more than 2? ---------------------------------# 
@@ -577,9 +632,9 @@ model <- glmer(bef_message_bool
                control = glmerControl(
                  optimizer = "bobyqa", 
                  optCtrl = list(maxfun=2e5)))
-
+library(margins)
 summary(model)
-
+margins(model)
 
 # Does hdi depend on review_score? 
 
@@ -601,57 +656,6 @@ plot(hi, 2)
 hi_bye <- aov(new_idhm ~ freight_issue_bool, data = brazil_df)  
 summary(hi_bye)
   
-# Mean centering ------------------------------------------------------------- #
-center_scale <- function(x) {
-  scale(x, scale = TRUE)
-}
-
-# apply it
-brazil_df$new_idhm <- center_scale(brazil_df$new_idhm)
-brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
-brazil_df$new_young_ratio <- center_scale(brazil_df$new_young_ratio)
-# brazil_df$max_price <- center_scale(brazil_df$max_price)
-
-# Outliers ------------------------------------------------------------------- #
-
-hist(brazil_df$max_price)
-
-maximum_price <- brazil_df %>%
-  select(max_price)
-
-
-# Above median variable ------------------------------------------------------- #
-
-# Summarise per product
-cat_1 <- brazil_df %>%
-  group_by(product_category_name) %>%
-  summarise(mean = mean(max_price),
-            median = median(max_price),
-            sd = sd(max_price),
-            unique_count = unique(n()))
-# get rid of NA
-cat_1 <- cat_1[1:71,]
-# Keep only the interesting ones
-cat_1 <- cat_1 %>%
-  select(product_category_name,
-         mean, 
-         median)
-# merge with original dataframe
-brazil_df <- merge(brazil_df, cat_1,
-                    by.x = "product_category_name",
-                    by.y = "product_category_name",
-                    all.x = TRUE)
-# calculate derived variables 
-brazil_df <- brazil_df %>%
-  mutate(above_median = ifelse(max_price > median, 1, 0),
-         above_median = as.factor(above_median),
-         above_mean = ifelse(max_price > mean, 1, 0),
-         above_mean = as.factor(above_mean))
-# Check out the end product...
-table(brazil_df$above_median)
-
-str(brazil_df$above_median)
-
 
 # Numeric culture ------------------------------------------------------------- #
 
@@ -1276,7 +1280,7 @@ brazil_df$mills <- mills0
 # Truncated fsys 
 truncated <- brazil_df[brazil_df$bef_message_bool == 1,]
 
-
+# Linear model
 simpy_glm <- lm(bef_nchar ~ new_idhm + mills, data = truncated)
 summary(simpy_glm)
 AIC(simpy_glm)
@@ -1297,7 +1301,7 @@ hist(m1_residuals)
 library(MASS)
 simpy_glms <- glm.nb(bef_nchar ~ new_idhm + mills, data = truncated)
 AIC(simpy_glms)
-
+summary(simpy_glms)
 
 
 m1_residuals <- residuals(simpy_glms)
@@ -1305,6 +1309,9 @@ m1_residuals <- residuals(simpy_glms)
 qqnorm(m1_residuals, pch = 1, frame = FALSE)
 qqline(m1_residuals, col = "steelblue", lwd = 2)
 hist(m1_residuals)
+
+
+
 
 pois_glms <- glm(bef_nchar ~ new_idhm + mills, family="poisson", data=truncated)
 AIC(pois_glms)
@@ -1342,3 +1349,5 @@ heckman <- selection(selection = bef_message_bool
                      ~ new_idhm,
                      data = brazil_pos, method = "2step")
 summary(heckman)
+
+stargazer(heckman, type = "text")
