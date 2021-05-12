@@ -4,6 +4,7 @@ library(sampleSelection)
 library(sjstats)
 library(ggplot2)
 library(lme4)
+library(stats)
 library(tictoc)
 library(GLMMadaptive)
 library(glmmTMB)
@@ -70,31 +71,33 @@ brazil_df <- brazil_df %>%
                                                           "high", 
                                                           "very high")))
 
-# MISSINGNESS ----------------------------------------------------------------- 
-
+# WOrk in progress (for missingness) -----------------------------------------
+# Order status to "delivered"
 table(brazil_df$order_status)
-
 non_delivered <- brazil_df %>%
-  filter(!order_status == "delivered")
+  filter(!order_status == "delivered") # Though we should look at what causes non-deliveries.
+
+
+# Category names
 nrow(non_delivered)
 colSums(is.na(non_delivered))
+
+# MISSINGNESS ----------------------------------------------------------------- 
 
 
 # only keep delivered ones
 brazil_df <- brazil_df %>%
   filter(order_status == "delivered")
 
-# Get rid of NA in DV
-colSums(is.na(brazil_df))
+brazil_df <- brazil_df %>%
+  filter(! is.na(product_category_name))
 
 brazil_df <- brazil_df %>%
   filter(!is.na(bef_message_bool))
 
 colSums(is.na(brazil_df))
 
-categorties_missing <-
-  
-  stargazer(brazil_df, type = "text")
+
 
 # Above median variable ------------------------------------------------------- 
 
@@ -393,7 +396,7 @@ stargazer(null_model, nested_null_model_1, nested_null_model_2,  type = "text", 
 # Do the same with full models ------------------------------------------------
 
 
-# (4.4.) Fit null model on full train
+# (4.4.) Fit model on full train
 full_model <- glm(formula = bef_message_bool 
                   ~ 1
                   + mc_new_idhm
@@ -402,7 +405,7 @@ full_model <- glm(formula = bef_message_bool
                   + mc_new_young_ratio
                   + review_score
                   + year
-                  + order_status
+                  + order_status # What to do with this one? 
                   + udh_indicator
                   + intimate_goods
                   + experience_goods
@@ -416,6 +419,75 @@ full_model <- glm(formula = bef_message_bool
 AIC(full_model)
 summary(full_model)
 vif(full_model)
+
+
+train$bef_message_bool <- as.integer(train$bef_message_bool) - 1
+
+# (4.5.) Fit probit model on full train
+full_prob_model <- glm(formula = bef_message_bool 
+                  ~ mc_new_idhm
+                  + urbanity_disc
+                  + mc_new_young_ratio
+                  + review_score
+                  + year
+                  + udh_indicator
+                  + intimate_goods
+                  + experience_goods
+                  + review_sent_wknd
+                  + item_count_disc
+                  + above_median,
+                  data = train[train$region == "south",],
+                  family = binomial(link = "probit")
+)
+summary(full_prob_model)
+#termplot(full_prob_model)
+
+used_data <- cbind(full_prob_model$model$bef_message_bool, fitted.values(full_prob_model))
+used_data <- as.data.frame(used_data)
+used_data <- used_data %>%
+  mutate(V3 = ifelse(V1 == 1, V1-V2, V2))
+
+hist(used_data$V3)
+residuals(full_prob_model, type = "response")
+
+
+
+nested_null_model_2 <- glmer(
+  formula = bef_message_bool ~ 1 + mc_new_idhm +(1 | customer_city) + (1 | customer_state),
+  family = binomial(link = "logit"),
+  data = train,
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+used_data <- cbind(nested_null_model_2$model$bef_message_bool, fitted.values(nested_null_model_2))
+used_data <- as.data.frame(used_data)
+used_data <- used_data %>%
+  mutate(V3 = ifelse(V1 == 1, V1-V2, V2))
+
+hist(used_data$V3)
+
+
+
+
+plot(density(rstandard(full_prob_model, type='deviance')))
+lines(density(resid(m1, type='response')), col='red')
+
+scatter.smooth(rstandard(full_prob_model, type='deviance'), col='gray')
+
+scatter.smooth(predict(full_prob_model, type='response'), rstandard(full_prob_model, type='deviance'), col='gray')
+
+probies <- full_prob_model %>% predict(test, type = "response", allow.new.levels = TRUE)
+hist(probies)
+
+both <- cbind(probies, train[! is.na(train$product_category_name),]$bef_message_bool)
+
+hist(residuals(full_prob_model))
+summary(full_probit_model)
+vif(full_probit_model)
+
+
 
 
 # (4.5.) Fit null model on fullpositives only
