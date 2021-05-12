@@ -561,14 +561,9 @@ brazil_pos <- brazil_df[brazil_df$review_score == 4 | brazil_df$review_score == 
 brazil_neg <- brazil_df[brazil_df$review_score == 1 | brazil_df$review_score == 2,]
  
 
-  
+
 fit_1 <- glm(bef_message_bool 
-             ~ new_idhm
-             + review_score
-             + region
-             + new_young_ratio
-               + above_median
-             + new_urbanity,
+             ~ new_young_ratio,
              data = test, 
              family = binomial(link = "logit"))
 
@@ -1260,7 +1255,7 @@ model <- glmer(formula = bef_message_bool
                control = glmerControl(
                  optimizer = "bobyqa", 
                  optCtrl = list(maxfun=2e5))
-)
+              )
 
 summary(model)
 
