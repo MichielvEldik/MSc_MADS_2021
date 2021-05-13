@@ -16,7 +16,8 @@ library(dplyr)
 library(corrplot)
 library(FNN)
 library(tmaptools)
-library(SpatialEpi)
+library(geosphere)
+library(sp)
 
 # ------------------------------- #
 # Cleaning and deriving variables # -------------------------------------------
@@ -1052,6 +1053,103 @@ teresina_udh <- read.csv("./udh_queried_data/teresina_udh_queried.csv")
 petrolina_juazeiro_udh <- read.csv("./udh_queried_data/petrolina_juazeiro_udh_queried.csv")
 vale_do_rio_cuiaba_udh <- read.csv("./udh_queried_data/vale_do_rio_cuiaba_udh_queried.csv")
 vale_do_paraiba_e_litoral_norte_udh <- read.csv("./udh_queried_data/vale_do_paraiba_e_litoral_norte_udh_queried.csv")
+
+# Experiment 
+
+
+
+udh_merge_ex_with_in <- function(internal_data, external_data, metro_munics) {
+  
+  external_data <- external_data[
+    !is.na(external_data$udh.lat) | !is.na(external_data$udh.long),]
+  
+  internal_data <- internal_data[
+    internal_data$customer_city %in% metro_munics & !is.na(internal_data$centroid_lat),]
+  
+  nn2 <- get.knnx(
+    external_data[,c("udh.lat", "udh.long")], 
+    internal_data[,c("centroid_lat", "centroid_long")], 
+    2)
+  
+  internal_data$local_index <- c(1:nrow(internal_data)) 
+  external_data$local_index <- c(1:nrow(external_data))
+  
+  internal_data$index_other_data <- nn2$nn.index[,1]
+  internal_data$dist <- nn2$nn.dist[,1]
+  
+  married <- merge(internal_data,
+                   external_data,
+                   by.x = "index_other_data",
+                   by.y = "local_index")
+  return(married)
+}
+
+
+
+
+
+d <- distHaversine(sp_udh[1,c("udh.long", "udh.lat")], sp_udh[3,c("udh.long", "udh.lat")])
+
+
+for (i in nrow(sp_udh)) {
+  for (b in internal_data) {
+    print(distHaversine(sp_udh[i,c("udh.long", "udh.lat")], 
+    internal_data[b,c("centroid_long", "centroid_lat")]))
+  }
+}
+
+
+emptyvec <- rep(0, nrow(internal_data))
+counter <- 1
+
+
+for (b in 1:nrow(internal_data)) {
+  emptyvec[counter] <- distHaversine(sp_udh[1,c("udh.long", "udh.lat")], 
+                      internal_data[b,c("centroid_long", "centroid_lat")])
+  counter <- counter + 1
+}
+which.min(emptyvec)
+
+
+sp_udh$nn_index <- 0
+sp_udh[1, "nn_index"] <- which.min(emptyvec)
+
+internal_data[14019, c("centroid_long", "centroid_lat")]
+
+
+coordinates(sp_udh) <- c("udh.long", "udh.lat")
+d <- gDistance()
+
+
+
+# REAL SHIT 
+
+sp_udh <- sp_udh[!is.na(sp_udh$udh.long),]
+sp_udh$nn_index <- 0
+sp_udh$nn_dist <- 0
+counter <- 1
+internal_data <- brazil_df[
+  brazil_df$customer_city %in% sao_paulo_metro_municips & !is.na(brazil_df$centroid_lat),]
+meta_counter <- 1
+for (i in 1:2) {
+  emptyvec <- rep(0, nrow(internal_data))
+  counter <- 1
+  for (b in 1:nrow(internal_data)) {
+    emptyvec[counter] <- distHaversine(sp_udh[i,c("udh.long", "udh.lat")], 
+                                       internal_data[b,c("centroid_long", "centroid_lat")])
+    counter <- counter + 1
+  }
+  sp_udh[i,]$nn_index <- which.min(emptyvec)
+  sp_udh[i,]$nn_dist <- min(emptyvec)
+  print(meta_counter)
+  meta_counter <- meta_counter + 1
+}
+
+
+harvesine
+
+
+
 
 
 # New merge functions (RUN)
