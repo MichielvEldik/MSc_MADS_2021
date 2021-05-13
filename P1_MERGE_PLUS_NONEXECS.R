@@ -254,6 +254,13 @@ bicep_df <- merge(bicep_df,
                   by.y = "product_id", 
                   all.x = TRUE) 
 
+
+# ------------------------ #
+# 4. Geo Merge             #
+# ------------------------ #
+#      EXECUTABLE PART     #
+# ------------------------ #
+
 # Sanity check
 length(unique(bicep_df$review_id))
 nrow(bicep_df)
@@ -298,6 +305,7 @@ for (i in 2:27){
 # Sanity check
 length(unique(base_df$review_id))
 nrow(base_df)
+
 
 write.csv(base_df, "full_geomerged_df.csv", row.names = FALSE)
 

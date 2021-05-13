@@ -127,7 +127,7 @@ brazil_df <- brazil_df %>%
 
 # Mean centering ------------------------------------------------------------- #
 center_scale <- function(x) {
-  scale(x, scale = TRUE)
+  scale(x, scale = FALSE)
 }
 
 # apply it
@@ -250,7 +250,6 @@ mean(as.integer(brazil_df$bef_message_bool))
 # Creating the big table ------------------------------------------------------
 pop <- brazil_df %>%
   group_by(region, hdi_class_col, bef_message_bool) %>%
-  select(region, hdi_class_col, bef_message_bool) %>%
   summarise(n = n())
 
 ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) + 

@@ -16,6 +16,7 @@ library(dplyr)
 library(corrplot)
 library(FNN)
 library(tmaptools)
+library(SpatialEpi)
 
 # ------------------------------- #
 # Cleaning and deriving variables # -------------------------------------------
@@ -989,10 +990,11 @@ write.csv(vale_do_paraiba_e_litoral_norte_udh, "./udh_queried_data/vale_do_parai
 
 
 
-# ------------------------- # Whole process sped up # (EXECUTE)----------------
+# ------------------------- (EXECUTE)------------------------------------------
 
 # internal data
 input <- read.csv("full_geomerged_df_2.csv")
+
 brazil_df <- input
 brazil_df <- brazil_df %>%
   mutate(customer_city = paste(customer_city, "(", sep = " "),

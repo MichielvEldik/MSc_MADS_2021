@@ -16,6 +16,8 @@ library(glmmADMB)
 library(R2admb)
 library(lmtest)
 library(margins)
+library(VGAM)
+library(plotly)
 
 # Load data ------------------------------------------------------------------ 
 input <- read.csv("full_geomerged_df_5.csv")
@@ -71,9 +73,10 @@ brazil_df <- brazil_df %>%
                                                           "high", 
                                                           "very high")))
 
-# WOrk in progress (for missingness) -----------------------------------------
+# Work in progress (for missingness) -----------------------------------------
 # Order status to "delivered"
 table(brazil_df$order_status)
+
 non_delivered <- brazil_df %>%
   filter(!order_status == "delivered") # Though we should look at what causes non-deliveries.
 
@@ -95,17 +98,33 @@ brazil_df <- brazil_df %>%
 brazil_df <- brazil_df %>%
   filter(!is.na(bef_message_bool))
 
+
+brazil_df <- brazil_df %>%
+  filter(!is.na(diff_est_deliv))
+
+brazil_df <- brazil_df %>%
+  mutate(item_count_bin = ifelse(item_count_disc == "single", 1, 0))
+
+brazil_df <- brazil_df %>%
+  filter(!is.na(product_height_cm))
+
 colSums(is.na(brazil_df))
 
 
+# Month variable --------------------------------------------------------------
 
-# Above median variable ------------------------------------------------------- 
+
+
+
+# Work in progress above median variable -------------------------------------
+
 
 all_names <- levels(brazil_df$product_category_name)
 
 hi <-brazil_df[brazil_df$product_category_name == all_names[1],]
-hi$product_category_name
 
+
+# Above median variable ------------------------------------------------------- 
 
 
 # Summarise per product
@@ -148,13 +167,29 @@ center_scale <- function(x) {
 brazil_df$mc_new_idhm <- center_scale(brazil_df$new_idhm)
 brazil_df$mc_new_young_ratio <- center_scale(brazil_df$new_young_ratio)
 
+hist(brazil_df$mc_new_idhm)
+hist(brazil_df$mc_new_young_ratio)
 
 # PART 2: FIRST INSIGHTS
 ################################################################################
+# -- Check: how many people have more than 2? --------------------------------- 
+
+more_than_2 <- brazil_df %>% 
+  group_by(customer_unique_id) %>% 
+  summarise(count = n())
+
+more_than_2 <- more_than_2 %>% 
+  mutate(two_or_one = ifelse(count >2, 0, 1), 
+         one = ifelse(count == 1, 1, 0))
+
+mean(more_than_2$two_or_one)
+mean(more_than_2$one)
+
+
 # Creating the big table ------------------------------------------------------
+
 pop <- brazil_df %>%
   group_by(region, hdi_class_col, bef_message_bool) %>%
-  select(region, hdi_class_col, bef_message_bool) %>%
   summarise(n = n())
 
 ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) + 
@@ -281,6 +316,73 @@ ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) +
                 "full" = "full (n = 92,762)"))) 
 
 
+
+# sample table ----------------------------------------------------------------
+
+hai <- as.data.frame(brazil_df %>% 
+                       select(region, 
+                              new_idhm,
+                              new_young_ratio,
+                              diff_pur_est,
+                              new_urbanity,
+                              bef_message_bool) %>% 
+                       group_by(region) %>%
+                       summarise(
+                         count_idhm = n(),
+                         mean_idhm = mean(new_idhm),
+                         sd_idhm = sd(new_idhm),
+                         mean_yr = mean(new_young_ratio),
+                         sd_yr = sd(new_young_ratio),
+                         mean_diff = mean(diff_pur_est),
+                         mean_urban = mean(new_urbanity),
+                         mean_rate = mean((as.integer(bef_message_bool) - 1))))
+
+stargazer(hai, type = "text", align = TRUE)
+
+hai_2 <- as.data.frame(brazil_df %>% 
+                       select(region, 
+                              review_score,
+                              bef_message_bool,
+                              new_idhm,
+                              other_issue,
+                              diff_est_deliv,
+                              new_young_ratio,
+                              new_urbanity,
+                              max_price,
+                              above_median) %>% 
+                       group_by(region) %>%
+                       summarise(
+                        count = n(),
+                        mean_review_score = mean(as.numeric(review_score)),
+                        mean_bef_message = mean(as.integer(bef_message_bool) - 1),
+                        mean_idhm = mean(new_idhm),
+                        sum_issue_freight = sum(other_issue),
+                        mean_issue_freight = mean(as.integer(other_issue)),
+                        mean_urbanity = mean(new_urbanity),
+                        mean_young = mean(new_young_ratio),
+                        mean_maxprice = mean(max_price),
+                        mean_abovemedian = mean(as.integer(above_median) - 1)
+                       ))
+
+hai_2_transpose <- t(as.matrix(hai_2))
+
+
+stargazer(hai_2,                 # Export txt
+          summary = FALSE,
+          type = "html",
+          out = "descriptives.html")
+
+stargazer(hai_2_transpose,                 # Export txt
+          summary = FALSE,
+          type = "html",
+          out = "hai_transpose.html",
+          title = "Table 1: ")
+
+
+stargazer(hai, type = "text", align = TRUE)
+
+
+
 # PART 3: SUBSETTING 
 ################################################################################
 # Robustness checks part -------------------------------------------------------
@@ -330,10 +432,16 @@ test_neg <- train[
   test$review_score == 2,]
 
 
+
+# Freight issue split ---------------------------------------------------------
+
+train_no_iss <- train[train$freight_issue_bool == 1 | train$other_issue == 1,]
+brazil_no_iss <- brazil_df[brazil_df$freight_issue_bool == 0 | brazil_df$other_issue == 0,]
+
 # PART 4: MODELING -------------------------------------------------------------
 ################################################################################
 
-# Find evidence for mixed model ------------------------------------------------
+# logit intercept vs. mixed logit intercept ------------------------------------
 # (4.1.) Fit null model
 null_model <- glm(formula = bef_message_bool ~ 1,
                   data = train,
@@ -350,12 +458,13 @@ manual_or <- probability_success / probability_failure # Checks out
 nested_null_model_1 <- glmer(
   formula = bef_message_bool ~ 1 + (1 | customer_city),
   family = binomial(link = "logit"),
-  data = train,
+  data = train_pos,
   control = glmerControl(
     optimizer = "bobyqa", 
     optCtrl = list(maxfun=2e5)
     )
   )
+icc(nested_null_model_1)
 AIC(nested_null_model_1)
 summary(nested_null_model_1)
 all_intercepts <- coef(nested_null_model_1)
@@ -370,14 +479,19 @@ lrtest(nested_null_model_1, null_model) # nested model has better fit
 nested_null_model_2 <- glmer(
   formula = bef_message_bool ~ 1 + (1 | customer_city) + (1 | customer_state),
   family = binomial(link = "logit"),
-  data = train,
+  data = train_pos,
   control = glmerControl(
     optimizer = "bobyqa", 
     optCtrl = list(maxfun=2e5)
   )
 )
-AIC(nested_null_model_2)
+as.data.frame(VarCorr(nested_null_model_2))[,c("grp","vcov")]
 summary(nested_null_model_2)
+var(resid(nested_null_model_2))
+
+icc(nested_null_model_2)
+AIC(nested_null_model_2)
+
 all_intercepts <- coef(nested_null_model_2)
 all_intercepts <- all_intercepts[["customer_state"]]
 mean_intercept <- mean(all_intercepts$`(Intercept)`) 
@@ -386,6 +500,26 @@ var(all_intercepts$`(Intercept)`)
 mean(all_intercepts$`(Intercept)`)
 dispersion_index <- sd(all_intercepts$`(Intercept)`) / mean(all_intercepts$`(Intercept)`)
 
+nested_null_model_3 <- glmer(
+  formula = bef_message_bool ~ 1 + (1 | customer_city) + (1 | customer_state) + (1 | udh_indicator),
+  family = binomial(link = "logit"),
+  data = train_pos,
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+icc(nested_null_model_3)
+AIC(nested_null_model_3)
+summary(nested_null_model_3)
+all_intercepts <- coef(nested_null_model_3)
+all_intercepts <- all_intercepts[["customer_state"]]
+mean_intercept <- mean(all_intercepts$`(Intercept)`) 
+hist(all_intercepts$`(Intercept)`)
+var(all_intercepts$`(Intercept)`)
+mean(all_intercepts$`(Intercept)`)
+
+
 # Comparison
 lrtest(nested_null_model_1, nested_null_model_2) # Multilevel 
 
@@ -393,8 +527,7 @@ lrtest(nested_null_model_1, nested_null_model_2) # Multilevel
 stargazer(null_model, nested_null_model_1, nested_null_model_2,  type = "text", title = "Table 1. Results")
 
 
-# Do the same with full models ------------------------------------------------
-
+# Logit full vs. mixed full ----------------------------------------------------
 
 # (4.4.) Fit model on full train
 full_model <- glm(formula = bef_message_bool 
@@ -405,15 +538,12 @@ full_model <- glm(formula = bef_message_bool
                   + mc_new_young_ratio
                   + review_score
                   + year
-                  + order_status # What to do with this one? 
                   + udh_indicator
                   + intimate_goods
                   + experience_goods
                   + review_sent_wknd
-                  + item_count_disc
-                  + above_median
-                  + region*above_median,
-                  data = train,
+                  + above_median*region,
+                  data = brazil_no_iss,
                   family = binomial(link = "logit")
 )
 AIC(full_model)
@@ -421,46 +551,17 @@ summary(full_model)
 vif(full_model)
 
 
-train$bef_message_bool <- as.integer(train$bef_message_bool) - 1
-
-# (4.5.) Fit probit model on full train
-full_prob_model <- glm(formula = bef_message_bool 
-                  ~ mc_new_idhm
-                  + urbanity_disc
-                  + mc_new_young_ratio
-                  + review_score
-                  + year
-                  + udh_indicator
-                  + intimate_goods
-                  + experience_goods
-                  + review_sent_wknd
-                  + item_count_disc
-                  + above_median,
-                  data = train[train$region == "south",],
-                  family = binomial(link = "probit")
-)
-summary(full_prob_model)
-#termplot(full_prob_model)
-
-used_data <- cbind(full_prob_model$model$bef_message_bool, fitted.values(full_prob_model))
-used_data <- as.data.frame(used_data)
-used_data <- used_data %>%
-  mutate(V3 = ifelse(V1 == 1, V1-V2, V2))
-
-hist(used_data$V3)
-residuals(full_prob_model, type = "response")
-
-
-
 nested_null_model_2 <- glmer(
   formula = bef_message_bool ~ 1 + mc_new_idhm +(1 | customer_city) + (1 | customer_state),
   family = binomial(link = "logit"),
-  data = train,
+  data = train_pos,
   control = glmerControl(
     optimizer = "bobyqa", 
     optCtrl = list(maxfun=2e5)
   )
 )
+icc(nested_null_model_2)
+
 used_data <- cbind(nested_null_model_2$model$bef_message_bool, fitted.values(nested_null_model_2))
 used_data <- as.data.frame(used_data)
 used_data <- used_data %>%
@@ -487,7 +588,7 @@ hist(residuals(full_prob_model))
 summary(full_probit_model)
 vif(full_probit_model)
 
-
+# Logit full vs. mixed full (POS/NEG) -----------------------------------------
 
 
 # (4.5.) Fit null model on fullpositives only
@@ -511,8 +612,6 @@ pos_model <- glm(formula = bef_message_bool
 AIC(pos_model)
 summary(pos_model)
 vif(pos_model)
-
-
 
 # (4.6.) Fit null model on negatives only
 neg_model <- glm(formula = bef_message_bool 
@@ -539,4 +638,262 @@ vif(neg_model)
 stargazer(pos_model, neg_model, type = "text")
 
 
+
+# Heckman ------------------------------------------------------------------
+
+
+
+train$bef_message_bool <- as.integer(train$bef_message_bool) - 1
+
+# (4.5.) Fit probit model on full train
+full_prob_model <- glm(formula = bef_message_bool 
+                       ~ mc_new_idhm
+                       + urbanity_disc
+                       + mc_new_young_ratio
+                       + total_freight_amount
+                       + review_score
+                       + year
+                       + intimate_goods
+                       + experience_goods
+                       + review_sent_wknd
+                       + above_median*region,
+                       data = train[train$udh_indicator == 0,],
+                       family = binomial(link = "probit"))
+summary(full_prob_model)
+
+vif(full_prob_model)
+residuals(full_prob_model, type = "response")
+hist(residuals(full_prob_model, type = "response"))
+
+train<- cbind(train, residuals(full_prob_model, type = "response"))
+
+# both of these are the same but we go with predict()
+probit_lp = predict(full_prob_model)
+#probabilities <- model %>% predict(train, type = "response",allow.new.levels = TRUE)
+
+mills0 = dnorm(probit_lp)/pnorm(probit_lp) # this works correctly
+
+# Somewhat multimodal; is this a concern? 
+hist(mills0)
+
+train$mills <- mills0
+
+
+
+# Truncated fsys 
+truncated_train <- train[train$bef_message_bool == 1,]
+
+
+# Negative binomial 
+m2 <- glm.nb(bef_nwords
+             ~ mc_new_idhm
+             + mills
+             + mc_new_young_ratio
+             + urbanity_disc
+             + review_answer_wknd
+             + review_score
+             + above_median*region, 
+             data = truncated_train)
+summary(m2)
+vif(m2)
+
+# Visualss -------------------------------------------------------------------
+
+hist(residuals(m2))
+
+truncated_pos <- cbind(truncated_pos, residuals(m2))
+
+res <- hexbin(truncated_pos$`residuals(full_prob_model, type = "response")`, truncated_pos$`residuals(m2)`, xbins=20)
+plot(res)
+
+library(psych)
+scatter.hist(x=truncated_pos$`residuals(full_prob_model, type = "response")`, y=truncated_pos$`residuals(m2)`, density=TRUE, ellipse=TRUE)
+
+cor(truncated_pos$`residuals(full_prob_model, type = "response")`, truncated_pos$`residuals(m2)`)
+
+
+
+p2 <- ggplot(truncated_pos, aes(x = `residuals(full_prob_model, type = "response")`, y = `residuals(m2)`)) +
+  geom_point(alpha = .5) +
+  geom_density_2d()
+
+p2
+
+colnames(truncated_pos)
+
+den3d <- kde2d(truncated_pos$`residuals(full_prob_model, type = "response")`, truncated_pos$`residuals(m2)`)
+persp(den3d, box=TRUE)
+
+
+den3d <- kde2d(scale(truncated_pos$`residuals(full_prob_model, type = "response")`), scale(truncated_pos$`residuals(m2)`))
+
+plot_ly(x =den3d$x,
+        y = den3d$y,
+        z = den3d$z) %>% add_surface()
+
+
+
+plot_ly(x =den3d$x,
+        y = den3d$y,
+        z = den3d$z) %>% add_surface(
+          contours = list(
+            z = list(
+              show=TRUE,
+              usecolormap=TRUE,
+              highlightcolor="#ff0000",
+              project=list(z=TRUE)
+            )
+          )
+        )
+
+# Can we assume bivariate normal distribution?
+library(normwhn.test)
+
+hist(truncated_pos$`residuals(full_prob_model, type = "response")`)
+
+# ---------------------------------------------------------------------------------
+data_nb <- m2$model
+nrow(data_nb)
+nrow(truncated_pos)
+summary(full_prob_model)
+# termplot(full_prob_model)
+
+used_data <- cbind(full_prob_model$model$bef_message_bool, fitted.values(full_prob_model))
+used_data <- as.data.frame(used_data)
+used_data <- used_data %>%
+  mutate(V3 = ifelse(V1 == 1, V1-V2, V2))
+# Only interested in deviance for "1" predictions
+
+used_data <- used_data[used_data$V1 == 1,]
+
+
+hist(used_data[used_data$V1 == 1,]$V3)
+residuals(full_prob_model, type = "response")
+
+
+
+# both of these are the same but we go with predict()
+probit_lp = predict(full_prob_model)
+#probabilities <- model %>% predict(train, type = "response",allow.new.levels = TRUE)
+
+mills0 = dnorm(probit_lp)/pnorm(probit_lp) # this works correctly
+
+# Somewhat multimodal; is this a concern? 
+hist(mills0)
+
+
+train_pos$mills <- mills0
+train_pos$residuals <- 
+
+
+hist(train_pos$mills)
+
+# Truncated fsys 
+truncated_pos <- train_pos[train_pos$bef_message_bool == 1,]
+
+# Linear model
+
+# Zero-truncated negative binomial
+m1 <- vglm(bef_nwords ~ new_idhm + mills, family = posnegbinomial(), data = truncated_pos)
+summary(m1)
+AIC(m1)
+
+# Negative binomial 
+m2 <- glm.nb(bef_nwords ~ mc_new_idhm 
+             + region 
+             + review_score 
+             + other_issue 
+             + mills
+             + , data = truncated_pos)
+summary(m2)
+hist(residuals(m2))
+qqnorm(residuals(m2), pch = 1, frame = FALSE)
+qqline(residuals(m2), col = "steelblue", lwd = 2)
+
+
+
+library(hexbin)
+res <- hexbin(residuals(m2), used_data[used_data$V1 == 1,]$V3, xbins=20)
+plot(res)
+
+
+# Mixed effects negative binomial
+m.nb <- glmer.nb(bef_nwords ~ new_idhm + region + review_score + mills + (1 | customer_city), data = truncated_pos, verbose=TRUE)
+summary(m.nb)
+performance::icc(m.nb)
+
+
+
+hurry <- fit_zinbinom1_bs(bef_nwords ~ new_idhm + mills,
+                       data = truncated_pos,
+                       family=list(family="truncated_nbinom1",link="log"))
+
+hurP1 <- glmmadmb(bef_nchar ~ 1 + new_idhm + mills (1 | customer_city), 
+                  data = truncated_pos, family = "binomial")
+
+
+simpy_glm <- lm(bef_nchar ~ new_idhm + mills, data = truncated)
+summary(simpy_glm)
+AIC(simpy_glm)
+plot(simpy_glm)
+
+
+# What predicts HDI? ----------------------------------------------------------
+
+
+hdi_predict <- lm(mc_new_idhm
+                  ~ urbanity_disc
+                  + mc_new_young_ratio
+                  + review_score
+                  + year
+                  + region
+                  + intimate_goods
+                  + experience_goods
+                  + review_sent_wknd
+                  + above_median
+                  + diff_pur_est
+                  + freight_issue_bool,
+                  data = brazil_df)
+summary(hdi_predict)                    
+hist(residuals(hdi_predict))
+plot(hdi_predict)
+plot(hdi_predict)
+vif(hdi_predict)
+plot(cooks.distance(hdi_predict))
+
+
+hdi_predict <- lm(mc_new_idhm
+                  ~ region
+                  + review_score
+                  + item_count_bin
+                  + urbanity_disc
+                  + mc_new_young_ratio,
+                  data = train)
+vif(hdi_predict)
+summary(hdi_predict)                    
+plot(hdi_predict)
+
+plot(train$mc_new_young_ratio, train$mc_new_idhm)
+
+hist(train$mc_new_young_ratio)
+
+hai <- as.data.frame(train %>% 
+                       select(region, 
+                              new_idhm,
+                              new_young_ratio,
+                              diff_pur_est,
+                              new_urbanity,
+                              bef_message_bool) %>% 
+                       group_by(region) %>%
+                       summarise(
+                         count_idhm = n(),
+                         mean_idhm = mean(new_idhm),
+                         sd_idhm = sd(new_idhm),
+                         mean_yr = mean(new_young_ratio),
+                         sd_yr = sd(new_young_ratio),
+                         mean_diff = mean(diff_pur_est),
+                         mean_urban = mean(new_urbanity),
+                         mean_rate = mean((as.integer(bef_message_bool) - 1))))
+
+stargazer(hai, type = "text", align = TRUE)
 
