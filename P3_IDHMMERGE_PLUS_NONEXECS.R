@@ -1122,6 +1122,7 @@ d <- gDistance()
 
 
 
+
 # REAL SHIT 
 
 sp_udh <- sp_udh[!is.na(sp_udh$udh.long),]
@@ -1146,7 +1147,192 @@ for (i in 1:2) {
 }
 
 
-harvesine
+
+
+sp_udh <- sp_udh[!is.na(sp_udh$udh.long),]
+
+counter <- 1
+internal_data <- brazil_df[
+  brazil_df$customer_city %in% sao_paulo_metro_municips & !is.na(brazil_df$centroid_lat),]
+internal_data$nn_index <- 0
+internal_data$nn_dist <- 0
+
+meta_counter <- 1
+
+for (i in 1:2){
+  emptyvec <- rep(0, nrow(internal_data))
+  for (b in 1:nrow(sp_udh)){
+    emptyvec[b] <- distHaversine(sp_udh[b,c("udh.long", "udh.lat")], 
+                                       internal_data[i,c("centroid_long", "centroid_lat")])
+  }
+  internal_data[i,]$nn_index <- which.min(emptyvec)
+  internal_data[i,]$nn_dist <- min(emptyvec)
+  print(meta_counter)
+  meta_counter <- meta_counter + 1
+  
+  
+}
+
+# opnieuw compleet 
+
+
+# Select right municipal subset
+internal_data <- brazil_df[
+  brazil_df$customer_city %in% sao_paulo_metro_municips & !is.na(brazil_df$centroid_lat),]
+internal_data$nn_index <- 0
+internal_data$nn_dist <- 0
+# identifier of coordinate combinations
+internal_data$coordinate_id <- paste(as.character(internal_data$centroid_long), 
+                                     as.character(internal_data$centroid_lat), sep = " ")
+# Select only relevant columns 
+coordinates_uniques <- internal_data %>% 
+  select(centroid_lat, 
+         centroid_long, 
+         coordinate_id)
+# Get rid of duplicates to speed up the whole process
+coordinates_uniques <- coordinates_uniques[!duplicated(coordinates_uniques), ]
+coordinates_uniques$nn_index <- 0
+coordinates_uniques$nn_dist <- 0
+# First observation only try
+
+# wrap the whol thing
+for (i in 1:nrow(coordinates_uniques)) {
+  emptyvec <- rep(0, nrow(sp_udh))
+  for (b in 1:nrow(sp_udh)){
+    emptyvec[b] <- distHaversine(
+      coordinates_uniques[i,c("centroid_long", "centroid_lat")],
+      sp_udh[b,c("udh.long", "udh.lat")], )
+  }
+  coordinates_uniques[i,]$nn_index <- which.min(emptyvec)
+  coordinates_uniques[i,]$nn_dist <- min(emptyvec)
+}
+
+
+
+# OFFICIAL FUNCTION ----------------------------------------------------------
+
+haversine_function <- function(brazil_df, udh_df, metros_list){
+  # udh clean
+  udh_df <- udh_df[!is.na(udh_df$udh.lat),]
+  # Select right municipal subset
+  internal_data <- brazil_df[
+    brazil_df$customer_city %in% metros_list & !is.na(brazil_df$centroid_lat),]
+  # identifier of coordinate combinations
+  internal_data$coordinate_id <- paste(as.character(internal_data$centroid_long), 
+                                       as.character(internal_data$centroid_lat), sep = " ")
+  # Select only relevant columns 
+  coordinates_uniques <- internal_data %>% 
+    select(centroid_lat, 
+           centroid_long, 
+           coordinate_id)
+  # Get rid of duplicates to speed up the whole process
+  coordinates_uniques <- coordinates_uniques[!duplicated(coordinates_uniques), ]
+  coordinates_uniques$nn_index <- 0
+  coordinates_uniques$nn_dist <- 0
+  # wrap the whol thing
+  for (i in 1:nrow(coordinates_uniques)) {
+    emptyvec <- rep(0, nrow(udh_df))
+    for (b in 1:nrow(udh_df)){
+      emptyvec[b] <- distHaversine(
+        coordinates_uniques[i,c("centroid_long", "centroid_lat")],
+        udh_df[b,c("udh.long", "udh.lat")], )
+    }
+    # index of minimal distance 
+    coordinates_uniques[i,]$nn_index <- which.min(emptyvec)
+    # the minimal distance itself
+    coordinates_uniques[i,]$nn_dist <- min(emptyvec)
+  }
+  # Get reid of centroid_lat, -long, to avoid duiplicates in merge back 
+  coordinates_uniques <- coordinates_uniques %>%
+    select(-centroid_lat,
+           -centroid_long)
+  # Merge duplicate coordiantes back to data
+  merged_back <- merge(internal_data,
+                       coordinates_uniques,
+                       by.x = "coordinate_id",
+                       by.y = "coordinate_id",
+                       all.x = TRUE)
+  # Merge census data based on inices
+  merged_2 <- merge(merged_back, 
+                   udh_df,
+                   by.x = "nn_index",
+                   by.y = "X",
+                   all.x = TRUE)
+  return(merged_2)
+}
+coords <- haversine_function(brazil_df, belem_udh, belem_metro_municips )
+
+
+
+
+
+
+
+
+
+distHaversine(sp_udh[3,c("udh.long", "udh.lat")], 
+                             internal_data[1,c("centroid_long", "centroid_lat")])
+
+emptyvec <- rep(0, nrow(sp_udh))
+
+
+for (b in 1:nrow(sp_udh)){
+  emptyvec[b] <- distHaversine(internal_data[1,c("centroid_long", "centroid_lat")],
+                               sp_udh[b,c("udh.long", "udh.lat")], )
+}
+internal_data[1,]$nn_index <- which.min(emptyvec)
+internal_data[1,]$nn_dist <- min(emptyvec)
+
+
+# -----------------------------------------------------------------------------
+
+for (i in 1:2) {
+  emptyvec <- rep(0, nrow(internal_data))
+  counter <- 1
+  for (b in 1:nrow(internal_data)) {
+    emptyvec[counter] <- distHaversine(sp_udh[i,c("udh.long", "udh.lat")], 
+                                       internal_data[b,c("centroid_long", "centroid_lat")])
+    counter <- counter + 1
+  }
+  sp_udh[i,]$nn_index <- which.min(emptyvec)
+  sp_udh[i,]$nn_dist <- min(emptyvec)
+  print(meta_counter)
+  meta_counter <- meta_counter + 1
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+haversine <- function(brazil_df, metro_df, metro_list) {
+  # Get rid of NAs
+  metro_df <- metro_df[!is.na(metro_df$udh.long),]
+  # New columns to fill up
+  sp_udh$nn_index <- 0
+  sp_udh$nn_dist <- 0
+  # Subset of brazil_df containing metro-specific municips
+  internal_data <- brazil_df[brazil_df$customer_city %in% metro_list &
+                             !is.na(brazil_df$centroid_lat),]
+  # Define counter for the first loop 
+  meta_counter <- 1
+  # For every observation in the brazil_df subset...
+  for (i in 1:nrow(internal_data)) {
+    
+    
+    
+    
+    
+  }
+  
+}
 
 
 
