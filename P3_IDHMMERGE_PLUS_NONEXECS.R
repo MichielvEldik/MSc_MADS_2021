@@ -23,7 +23,7 @@ library(sp)
 # Cleaning and deriving variables # -------------------------------------------
 # ------------------------------- #
 
-# Function is called inside column_fixer function
+# Function is called from the column_fixer function
 # Purpose: put data-level indicator for column name (state, municip, udh) 
 locality_names <- function(input_data, data_level) {
   
@@ -105,6 +105,7 @@ column_fixer <- function(new_data, data_level){
 # --------- #
 
 # function that uses names to query coordinates and returns them to main func.
+# Continues upon encountering errors for queries
 get_cors <- function(datasetje){
   counter <- 1 
   subbie_df <- datasetje
@@ -127,7 +128,7 @@ get_cors <- function(datasetje){
   return(subbie_df)
 }
 
-# main function, cleans before query and calls query function
+# main function, cleans inputs before query and calls query function
 coordinate_retriever <- function(input_udh_data, city_name) {
   # Clean text to avoid trouble in OSM queries
   input_udh_data <- input_udh_data %>%
@@ -152,11 +153,13 @@ coordinate_retriever <- function(input_udh_data, city_name) {
   return(input_udh_data_retrieved_cors)
 }
 
-# ---------------------------- #
-# udh merge with internal data # ----------------------------------------------
-# ---------------------------- #
+# ---------------------------- #      # --------------------------- #
+# udh merge with internal data # ---- # WARNING: NOT IN USE ANYMORE # ---------
+# ---------------------------- #      # Haversine is used instead   #  
+                                      # --------------------------- #
 
 # function that combines udh-level dataset with data from internal
+# Based on euclidean distance 
 udh_merge_ex_with_in <- function(internal_data, external_data, metro_munics) {
   
   external_data <- external_data[
@@ -183,44 +186,69 @@ udh_merge_ex_with_in <- function(internal_data, external_data, metro_munics) {
   return(married)
 }
 
-# ------------------------ #
-# OLD udh_merge_ex_with_in # -------------------------------------------------- 
-# ------------------------ #
 
-old_udh_merge_ex_with_in <- function(internal_data, external_data, city) {
+# ------------------ #
+# Haversine function # --------------------------------------------------------
+# ------------------ #
+
+# merges Olist data with the census coordinate data 
+# based on minimal haversine distances
+haversine_function <- function(brazil_df, udh_df, metros_list){
+  # udh clean
+  udh_df <- udh_df[!is.na(udh_df$udh.lat),]
+  # Select right municipal subset
+  internal_data <- brazil_df[
+    brazil_df$customer_city %in% metros_list & !is.na(brazil_df$centroid_lat),]
+  # identifier of coordinate combinations
+  internal_data$coordinate_id <- paste(as.character(internal_data$centroid_long), 
+                                       as.character(internal_data$centroid_lat), sep = " ")
+  # Select only relevant columns 
+  coordinates_uniques <- internal_data %>% 
+    select(centroid_lat, 
+           centroid_long, 
+           coordinate_id)
+  # Get rid of duplicates to speed up the whole process
+  coordinates_uniques <- coordinates_uniques[!duplicated(coordinates_uniques), ]
+  coordinates_uniques$nn_index <- 0
+  coordinates_uniques$nn_dist <- 0
+  # wrap the whol thing
+  for (i in 1:nrow(coordinates_uniques)) {
+    emptyvec <- rep(0, nrow(udh_df))
+    for (b in 1:nrow(udh_df)){
+      emptyvec[b] <- distHaversine(
+        coordinates_uniques[i,c("centroid_long", "centroid_lat")],
+        udh_df[b,c("udh.long", "udh.lat")], )
+    }
+    # index of minimal distance 
+    coordinates_uniques[i,]$nn_index <- which.min(emptyvec)
+    # the minimal distance itself
+    coordinates_uniques[i,]$nn_dist <- min(emptyvec)
+  }
+  # Get reid of centroid_lat, -long, to avoid duiplicates in merge back 
+  coordinates_uniques <- coordinates_uniques %>%
+    select(-centroid_lat,
+           -centroid_long)
+  # Merge duplicate coordiantes back to data
+  merged_back <- merge(internal_data,
+                       coordinates_uniques,
+                       by.x = "coordinate_id",
+                       by.y = "coordinate_id",
+                       all.x = TRUE)
+  # Merge census data based on inices
+  merged_2 <- merge(merged_back, 
+                    udh_df,
+                    by.x = "nn_index",
+                    by.y = "X",
+                    all.x = TRUE)
+  # Coordinate ID no longer needed
+  merged_2 <- merged_2 %>%
+    select(-coordinate_id)
   
-  external_data <- external_data[
-    !is.na(external_data$udh.lat) | !is.na(external_data$udh.long),]
-  
-  internal_data <- internal_data[
-    internal_data$customer_city == city & !is.na(internal_data$centroid_lat),]
-  
-  nn2 <- get.knnx(
-    external_data[,c("udh.lat", "udh.long")], 
-    internal_data[,c("centroid_lat", "centroid_long")], 
-    2)
-  
-  internal_data$local_index <- c(1:nrow(internal_data)) 
-  external_data$local_index <- c(1:nrow(external_data))
-  
-  internal_data$index_other_data <- nn2$nn.index[,1]
-  internal_data$dist_lat <- nn2$nn.dist[,1]
-  internal_data$dist_long <- nn2$nn.dist[,2]
-  internal_data$total_distancjes <- internal_data$dist_lat + internal_data$dist_long
-  
-  married <- merge(internal_data,
-                   external_data,
-                   by.x = "index_other_data",
-                   by.y = "local_index")
-  return(married)
+  return(merged_2)
 }
-
 # ------------------------------------ #
 # Define municipalities per metro area # -------------------------------------
 # ------------------------------------ #
-
-
-
 
 # Region: North
 # State: Para (pa)
@@ -751,8 +779,6 @@ litoral_norte_metro_municips <- tolower(litoral_norte_metro_municips)
 litoral_norte_metro_municips <- paste(litoral_norte_metro_municips, "(sp)")
 
 
-
-
 # Region: South
 # State: Rio Grande do Sul (rs)
 porto_alegre_metro_municips <- c(
@@ -962,7 +988,6 @@ petrolina_juazeiro_udh <- coordinate_retriever(petrolina_juazeiro_udh, "petrolin
 vale_do_rio_cuiaba_udh <- coordinate_retriever(vale_do_rio_cuiaba_udh, "mato grosso")
 vale_do_paraiba_e_litoral_norte_udh <- coordinate_retriever(vale_do_paraiba_e_litoral_norte_udh, "litoral norte")
 
-
 # write as csv to avoid doing things over and over again
 write.csv(sp_udh, "./udh_queried_data/sao_paulo_udh_queried.csv")
 write.csv(fortaleza_udh, "./udh_queried_data/fortaleza_udh_queried.csv")
@@ -1028,7 +1053,6 @@ brazil_df <- brazil_df %>%
   select(- new_names)
 
 
-
 sp_udh <- read.csv("./udh_queried_data/sao_paulo_udh_queried.csv")
 fortaleza_udh <- read.csv("./udh_queried_data/fortaleza_udh_queried.csv")
 recife_udh <- read.csv("./udh_queried_data/recife_udh_queried.csv")
@@ -1054,289 +1078,32 @@ petrolina_juazeiro_udh <- read.csv("./udh_queried_data/petrolina_juazeiro_udh_qu
 vale_do_rio_cuiaba_udh <- read.csv("./udh_queried_data/vale_do_rio_cuiaba_udh_queried.csv")
 vale_do_paraiba_e_litoral_norte_udh <- read.csv("./udh_queried_data/vale_do_paraiba_e_litoral_norte_udh_queried.csv")
 
-# Experiment 
-
-
-
-udh_merge_ex_with_in <- function(internal_data, external_data, metro_munics) {
-  
-  external_data <- external_data[
-    !is.na(external_data$udh.lat) | !is.na(external_data$udh.long),]
-  
-  internal_data <- internal_data[
-    internal_data$customer_city %in% metro_munics & !is.na(internal_data$centroid_lat),]
-  
-  nn2 <- get.knnx(
-    external_data[,c("udh.lat", "udh.long")], 
-    internal_data[,c("centroid_lat", "centroid_long")], 
-    2)
-  
-  internal_data$local_index <- c(1:nrow(internal_data)) 
-  external_data$local_index <- c(1:nrow(external_data))
-  
-  internal_data$index_other_data <- nn2$nn.index[,1]
-  internal_data$dist <- nn2$nn.dist[,1]
-  
-  married <- merge(internal_data,
-                   external_data,
-                   by.x = "index_other_data",
-                   by.y = "local_index")
-  return(married)
-}
-
-
-
-
-
-d <- distHaversine(sp_udh[1,c("udh.long", "udh.lat")], sp_udh[3,c("udh.long", "udh.lat")])
-
-
-for (i in nrow(sp_udh)) {
-  for (b in internal_data) {
-    print(distHaversine(sp_udh[i,c("udh.long", "udh.lat")], 
-    internal_data[b,c("centroid_long", "centroid_lat")]))
-  }
-}
-
-
-emptyvec <- rep(0, nrow(internal_data))
-counter <- 1
-
-
-for (b in 1:nrow(internal_data)) {
-  emptyvec[counter] <- distHaversine(sp_udh[1,c("udh.long", "udh.lat")], 
-                      internal_data[b,c("centroid_long", "centroid_lat")])
-  counter <- counter + 1
-}
-which.min(emptyvec)
-
-
-sp_udh$nn_index <- 0
-sp_udh[1, "nn_index"] <- which.min(emptyvec)
-
-internal_data[14019, c("centroid_long", "centroid_lat")]
-
-
-coordinates(sp_udh) <- c("udh.long", "udh.lat")
-d <- gDistance()
-
-
-
-
-# REAL SHIT 
-
-sp_udh <- sp_udh[!is.na(sp_udh$udh.long),]
-sp_udh$nn_index <- 0
-sp_udh$nn_dist <- 0
-counter <- 1
-internal_data <- brazil_df[
-  brazil_df$customer_city %in% sao_paulo_metro_municips & !is.na(brazil_df$centroid_lat),]
-meta_counter <- 1
-for (i in 1:2) {
-  emptyvec <- rep(0, nrow(internal_data))
-  counter <- 1
-  for (b in 1:nrow(internal_data)) {
-    emptyvec[counter] <- distHaversine(sp_udh[i,c("udh.long", "udh.lat")], 
-                                       internal_data[b,c("centroid_long", "centroid_lat")])
-    counter <- counter + 1
-  }
-  sp_udh[i,]$nn_index <- which.min(emptyvec)
-  sp_udh[i,]$nn_dist <- min(emptyvec)
-  print(meta_counter)
-  meta_counter <- meta_counter + 1
-}
-
-
-
-
-sp_udh <- sp_udh[!is.na(sp_udh$udh.long),]
-
-counter <- 1
-internal_data <- brazil_df[
-  brazil_df$customer_city %in% sao_paulo_metro_municips & !is.na(brazil_df$centroid_lat),]
-internal_data$nn_index <- 0
-internal_data$nn_dist <- 0
-
-meta_counter <- 1
-
-for (i in 1:2){
-  emptyvec <- rep(0, nrow(internal_data))
-  for (b in 1:nrow(sp_udh)){
-    emptyvec[b] <- distHaversine(sp_udh[b,c("udh.long", "udh.lat")], 
-                                       internal_data[i,c("centroid_long", "centroid_lat")])
-  }
-  internal_data[i,]$nn_index <- which.min(emptyvec)
-  internal_data[i,]$nn_dist <- min(emptyvec)
-  print(meta_counter)
-  meta_counter <- meta_counter + 1
-  
-  
-}
-
-# opnieuw compleet 
-
-
-# Select right municipal subset
-internal_data <- brazil_df[
-  brazil_df$customer_city %in% sao_paulo_metro_municips & !is.na(brazil_df$centroid_lat),]
-internal_data$nn_index <- 0
-internal_data$nn_dist <- 0
-# identifier of coordinate combinations
-internal_data$coordinate_id <- paste(as.character(internal_data$centroid_long), 
-                                     as.character(internal_data$centroid_lat), sep = " ")
-# Select only relevant columns 
-coordinates_uniques <- internal_data %>% 
-  select(centroid_lat, 
-         centroid_long, 
-         coordinate_id)
-# Get rid of duplicates to speed up the whole process
-coordinates_uniques <- coordinates_uniques[!duplicated(coordinates_uniques), ]
-coordinates_uniques$nn_index <- 0
-coordinates_uniques$nn_dist <- 0
-# First observation only try
-
-# wrap the whol thing
-for (i in 1:nrow(coordinates_uniques)) {
-  emptyvec <- rep(0, nrow(sp_udh))
-  for (b in 1:nrow(sp_udh)){
-    emptyvec[b] <- distHaversine(
-      coordinates_uniques[i,c("centroid_long", "centroid_lat")],
-      sp_udh[b,c("udh.long", "udh.lat")], )
-  }
-  coordinates_uniques[i,]$nn_index <- which.min(emptyvec)
-  coordinates_uniques[i,]$nn_dist <- min(emptyvec)
-}
-
-
-
-# OFFICIAL FUNCTION ----------------------------------------------------------
-
-haversine_function <- function(brazil_df, udh_df, metros_list){
-  # udh clean
-  udh_df <- udh_df[!is.na(udh_df$udh.lat),]
-  # Select right municipal subset
-  internal_data <- brazil_df[
-    brazil_df$customer_city %in% metros_list & !is.na(brazil_df$centroid_lat),]
-  # identifier of coordinate combinations
-  internal_data$coordinate_id <- paste(as.character(internal_data$centroid_long), 
-                                       as.character(internal_data$centroid_lat), sep = " ")
-  # Select only relevant columns 
-  coordinates_uniques <- internal_data %>% 
-    select(centroid_lat, 
-           centroid_long, 
-           coordinate_id)
-  # Get rid of duplicates to speed up the whole process
-  coordinates_uniques <- coordinates_uniques[!duplicated(coordinates_uniques), ]
-  coordinates_uniques$nn_index <- 0
-  coordinates_uniques$nn_dist <- 0
-  # wrap the whol thing
-  for (i in 1:nrow(coordinates_uniques)) {
-    emptyvec <- rep(0, nrow(udh_df))
-    for (b in 1:nrow(udh_df)){
-      emptyvec[b] <- distHaversine(
-        coordinates_uniques[i,c("centroid_long", "centroid_lat")],
-        udh_df[b,c("udh.long", "udh.lat")], )
-    }
-    # index of minimal distance 
-    coordinates_uniques[i,]$nn_index <- which.min(emptyvec)
-    # the minimal distance itself
-    coordinates_uniques[i,]$nn_dist <- min(emptyvec)
-  }
-  # Get reid of centroid_lat, -long, to avoid duiplicates in merge back 
-  coordinates_uniques <- coordinates_uniques %>%
-    select(-centroid_lat,
-           -centroid_long)
-  # Merge duplicate coordiantes back to data
-  merged_back <- merge(internal_data,
-                       coordinates_uniques,
-                       by.x = "coordinate_id",
-                       by.y = "coordinate_id",
-                       all.x = TRUE)
-  # Merge census data based on inices
-  merged_2 <- merge(merged_back, 
-                   udh_df,
-                   by.x = "nn_index",
-                   by.y = "X",
-                   all.x = TRUE)
-  return(merged_2)
-}
-coords <- haversine_function(brazil_df, belem_udh, belem_metro_municips )
-
-
-
-
-
-
-
-
-
-distHaversine(sp_udh[3,c("udh.long", "udh.lat")], 
-                             internal_data[1,c("centroid_long", "centroid_lat")])
-
-emptyvec <- rep(0, nrow(sp_udh))
-
-
-for (b in 1:nrow(sp_udh)){
-  emptyvec[b] <- distHaversine(internal_data[1,c("centroid_long", "centroid_lat")],
-                               sp_udh[b,c("udh.long", "udh.lat")], )
-}
-internal_data[1,]$nn_index <- which.min(emptyvec)
-internal_data[1,]$nn_dist <- min(emptyvec)
-
-
-# -----------------------------------------------------------------------------
-
-for (i in 1:2) {
-  emptyvec <- rep(0, nrow(internal_data))
-  counter <- 1
-  for (b in 1:nrow(internal_data)) {
-    emptyvec[counter] <- distHaversine(sp_udh[i,c("udh.long", "udh.lat")], 
-                                       internal_data[b,c("centroid_long", "centroid_lat")])
-    counter <- counter + 1
-  }
-  sp_udh[i,]$nn_index <- which.min(emptyvec)
-  sp_udh[i,]$nn_dist <- min(emptyvec)
-  print(meta_counter)
-  meta_counter <- meta_counter + 1
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-haversine <- function(brazil_df, metro_df, metro_list) {
-  # Get rid of NAs
-  metro_df <- metro_df[!is.na(metro_df$udh.long),]
-  # New columns to fill up
-  sp_udh$nn_index <- 0
-  sp_udh$nn_dist <- 0
-  # Subset of brazil_df containing metro-specific municips
-  internal_data <- brazil_df[brazil_df$customer_city %in% metro_list &
-                             !is.na(brazil_df$centroid_lat),]
-  # Define counter for the first loop 
-  meta_counter <- 1
-  # For every observation in the brazil_df subset...
-  for (i in 1:nrow(internal_data)) {
-    
-    
-    
-    
-    
-  }
-  
-}
-
-
-
-
+# -------------------
+# Haversine function
+sao_paulo_udh_haversine <- haversine_function(brazil_df, sp_udh, sao_paulo_metro_municips)
+fortaleza_udh_haversine <- haversine_function(brazil_df, fortaleza_udh, fortaleza_metro_municips)
+recife_udh_haversine <- haversine_function(brazil_df, recife_udh, recife_metro_municips)
+rio_dj_udh_haversine <- haversine_function(brazil_df, rio_dj_udh, rio_dj_metro_municips)
+salvador_udh_haversine <- haversine_function(brazil_df, salvador_udh, salvador_metro_municips)
+porto_alegre_udh_haversine <- haversine_function(brazil_df, porto_alegre_udh, porto_alegre_metro_municips)
+natal_udh_haversine <- haversine_function(brazil_df, natal_udh, natal_metro_municips)
+maceio_udh_haversine <- haversine_function(brazil_df, maceio_udh, maceio_metro_municips)
+belo_horizonte_udh_haversine <- haversine_function(brazil_df, belo_horizonte_udh, belo_horizonte_metro_municips)
+campinas_udh_haversine <- haversine_function(brazil_df, campinas_udh, campinas_metro_municips)
+curitiba_udh_haversine <- haversine_function(brazil_df, curitiba_udh, curitiba_metro_municips)
+belem_udh_haversine <- haversine_function(brazil_df, belem_udh, belem_metro_municips)
+goiania_udh_haversine <- haversine_function(brazil_df, goiania_udh, goiania_metro_municips)
+grande_vitoria_udh_haversine <- haversine_function(brazil_df, grande_vitoria_udh, grande_vitoria_metro_municips)
+florianopolis_udh_haversine <- haversine_function(brazil_df, florianopolis_udh, florianopolis_metro_municips)
+manaus_udh_haversine <- haversine_function(brazil_df, manaus_udh, manaus_metro_municips)
+sao_luis_udh_haversine <- haversine_function(brazil_df, sao_luis_udh, sao_luis_metro_municips)
+sorocaba_udh_haversine <- haversine_function(brazil_df, sorocaba_udh, sorocaba_metro_municips)
+baixada_santista_udh_haversine <- haversine_function(brazil_df, baixada_santista_udh, baixada_santista_metro_municips)
+brasilia_udh_haversine <- haversine_function(brazil_df, brasilia_udh, brasilia_metro_municips) 
+teresina_udh_haversine <- haversine_function(brazil_df, teresina_udh, teresina_metro_municips)
+petrolina_juazeiro_udh_haversine <- haversine_function(brazil_df, petrolina_juazeiro_udh, petrolina_juazeiro_metro_municips )
+vale_do_rio_cuiaba_udh_haversine <- haversine_function(brazil_df, vale_do_rio_cuiaba_udh, vale_do_rio_cuiaba_metro_municips)
+vale_do_paraiba_e_litoral_norte_udh_haversine <- haversine_function(brazil_df, vale_do_paraiba_e_litoral_norte_udh, litoral_norte_metro_municips)
 
 # New merge functions (RUN)
 sao_paulo_udh_merged <- udh_merge_ex_with_in(brazil_df, sp_udh, sao_paulo_metro_municips)
@@ -1365,26 +1132,46 @@ vale_do_rio_cuiaba_udh_merged <- udh_merge_ex_with_in(brazil_df, vale_do_rio_cui
 vale_do_paraiba_e_litoral_norte_udh_merged <- udh_merge_ex_with_in(brazil_df, vale_do_paraiba_e_litoral_norte_udh, litoral_norte_metro_municips)
 
 
-# Old merge functions (for reference DONT RUN)
-# old_sao_paulo_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sp_udh, "sao paulo (sp)")
-# old_fortaleza_udh_merged <- old_udh_merge_ex_with_in(brazil_df, fortaleza_udh, "fortaleza (ce)")
-# old_recife_udh_merged <- old_udh_merge_ex_with_in(brazil_df, recife_udh, "recife (pe)")
-# old_rio_dj_udh_merged <- old_udh_merge_ex_with_in(brazil_df, rio_dj_udh, "rio de janeiro (rj)")
-# old_salvador_udh_merged <- old_udh_merge_ex_with_in(brazil_df, salvador_udh, "salvador (ba)")
-# old_porto_alegre_udh_merged <- old_udh_merge_ex_with_in(brazil_df, porto_alegre_udh, "porto alegre (rs)")
-# old_natal_udh_merged <- old_udh_merge_ex_with_in(brazil_df, natal_udh, "natal (rn)")
-# old_maceio_udh_merged <- old_udh_merge_ex_with_in(brazil_df, maceio_udh, "maceio (al)")
-# old_belo_horizonte_udh_merged <- old_udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, "belo horizonte (mg)")
-# old_campinas_udh_merged <- old_udh_merge_ex_with_in(brazil_df, campinas_udh, "campinas (sp)")
-# old_curitiba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, curitiba_udh, "curitiba (pr)")
-# old_belem_udh_merged <- old_udh_merge_ex_with_in(brazil_df, belem_udh, "belem (pa)")
-# old_goiania_udh_merged <- old_udh_merge_ex_with_in(brazil_df, goiania_udh, "goiania (go)")
-# old_grande_vitoria_udh_merged <- old_udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, "vitoria (es)")
-# old_florianopolis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, florianopolis_udh, "florianopolis (sc)")
-# old_manaus_udh_merged <- old_udh_merge_ex_with_in(brazil_df, manaus_udh, "manaus (am)")
-# old_sao_luis_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sao_luis_udh, "sao luis (ma)")
-# old_sorocaba_udh_merged <- old_udh_merge_ex_with_in(brazil_df, sorocaba_udh, "sorocaba (sp)")
-# old_baixada_santista_udh_merged <- old_udh_merge_ex_with_in(brazil_df, baixada_santista_udh, "santos (sp)")
+# Equilateral Approximation
+equ_formu_1 <- function(df_with_coordinates) {
+  df_with_coordinates <- df_with_coordinates %>%
+    mutate(udh.long = udh.long * cos(udh.lat))
+}
+
+brazil_df_equ <- brazil_df %>%
+  mutate(centroid_long = centroid_long * cos(centroid_lat))
+
+
+bootywork <- equ_formu_1(sp_udh)
+
+equ_sp <- udh_merge_ex_with_in(brazil_df_equ, bootywork, sao_paulo_metro_municips)
+
+
+equu <- equ_sp %>%
+  select(centroid_lat,
+         centroid_long,
+         udh.lat,
+         udh.long,
+         dist,
+         customer_city)
+
+
+equu_sp <- sao_paulo_udh_merged %>%
+  select(centroid_lat,
+         centroid_long,
+         udh.lat,
+         udh.long,
+         dist,
+         customer_city)
+
+harvesine <- sao_paulo_udh_haversine %>%
+  select(centroid_lat,
+         centroid_long,
+         udh.lat,
+         udh.long,
+         nn_dist,
+         customer_city)
+
 
 
 # To fix column discrepancy due to atals imports
@@ -1405,31 +1192,91 @@ teresina_udh_merged <- to_get_rid_func(teresina_udh_merged)
 vale_do_paraiba_e_litoral_norte_udh_merged <- to_get_rid_func(vale_do_paraiba_e_litoral_norte_udh_merged)
 vale_do_rio_cuiaba_udh_merged <- to_get_rid_func(vale_do_rio_cuiaba_udh_merged)
 
-metros_1 <- rbind(sao_paulo_udh_merged, fortaleza_udh_merged)
-metros_1 <- rbind(metros_1, recife_udh_merged)
-metros_1 <- rbind(metros_1, rio_dj_udh_merged)
-metros_1 <- rbind(metros_1, salvador_udh_merged)
-metros_1 <- rbind(metros_1, porto_alegre_udh_merged)
-metros_1 <- rbind(metros_1, natal_udh_merged)
-metros_1 <- rbind(metros_1, maceio_udh_merged)
-metros_1 <- rbind(metros_1, belo_horizonte_udh_merged)
-metros_1 <- rbind(metros_1, curitiba_udh_merged)
-metros_1 <- rbind(metros_1, belem_udh_merged)
-metros_1 <- rbind(metros_1, goiania_udh_merged)
-metros_1 <- rbind(metros_1, grande_vitoria_udh_merged)
-metros_1 <- rbind(metros_1, florianopolis_udh_merged)
-metros_1 <- rbind(metros_1, manaus_udh_merged)
-metros_1 <- rbind(metros_1, sao_luis_udh_merged)
-metros_1 <- rbind(metros_1, sorocaba_udh_merged)
-metros_1 <- rbind(metros_1, baixada_santista_udh_merged)
-metros_1 <- rbind(metros_1, brasilia_udh_merged)
-metros_1 <- rbind(metros_1, teresina_udh_merged)
-metros_1 <- rbind(metros_1, petrolina_juazeiro_udh_merged)
-metros_1 <- rbind(metros_1, vale_do_rio_cuiaba_udh_merged)
-metros_1 <- rbind(metros_1, vale_do_paraiba_e_litoral_norte_udh_merged)
+# Same for Haversine
+brasilia_udh_haversine <- to_get_rid_func(brasilia_udh_haversine)
+manaus_udh_haversine <- to_get_rid_func(manaus_udh_haversine)
+petrolina_juazeiro_udh_haversine <- to_get_rid_func(petrolina_juazeiro_udh_haversine)
+sao_luis_udh_haversine <- to_get_rid_func(sao_luis_udh_haversine)
+sorocaba_udh_haversine <- to_get_rid_func(sorocaba_udh_haversine)
+teresina_udh_haversine <- to_get_rid_func(teresina_udh_haversine)
+vale_do_paraiba_e_litoral_norte_udh_haversine <- to_get_rid_func(vale_do_paraiba_e_litoral_norte_udh_haversine)
+vale_do_rio_cuiaba_udh_haversine <- to_get_rid_func(vale_do_rio_cuiaba_udh_haversine)
+
+
+
+
+
+# one subset for merged 
+metros_1_euclidean <- rbind(sao_paulo_udh_merged, fortaleza_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, recife_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, rio_dj_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, salvador_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, porto_alegre_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, natal_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, maceio_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, belo_horizonte_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, curitiba_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, belem_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, goiania_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, grande_vitoria_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, florianopolis_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, manaus_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, sao_luis_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, sorocaba_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, baixada_santista_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, brasilia_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, teresina_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, petrolina_juazeiro_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, vale_do_rio_cuiaba_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, vale_do_paraiba_e_litoral_norte_udh_merged)
+
+metro_cities_euclidean <- unique(metros_1_euclidean$customer_city)
+
+
+euclidean_metros <- metros_1_euclidean %>%
+  select(centroid_lat,
+         centroid_long,
+         udh.lat,
+         udh.long,
+         dist,
+         customer_city)
+
+colSums(is.na(non_metros_1)) # only 149 NA whereas it was 876
+
+
+# one subset for merged 
+metros_1 <- rbind(sao_paulo_udh_haversine, fortaleza_udh_haversine)
+metros_1 <- rbind(metros_1, recife_udh_haversine)
+metros_1 <- rbind(metros_1, rio_dj_udh_haversine)
+metros_1 <- rbind(metros_1, salvador_udh_haversine)
+metros_1 <- rbind(metros_1, porto_alegre_udh_haversine)
+metros_1 <- rbind(metros_1, natal_udh_haversine)
+metros_1 <- rbind(metros_1, maceio_udh_haversine)
+metros_1 <- rbind(metros_1, belo_horizonte_udh_haversine)
+metros_1 <- rbind(metros_1, curitiba_udh_haversine)
+metros_1 <- rbind(metros_1, belem_udh_haversine)
+metros_1 <- rbind(metros_1, goiania_udh_haversine)
+metros_1 <- rbind(metros_1, grande_vitoria_udh_haversine)
+metros_1 <- rbind(metros_1, florianopolis_udh_haversine)
+metros_1 <- rbind(metros_1, manaus_udh_haversine)
+metros_1 <- rbind(metros_1, sao_luis_udh_haversine)
+metros_1 <- rbind(metros_1, sorocaba_udh_haversine)
+metros_1 <- rbind(metros_1, baixada_santista_udh_haversine)
+metros_1 <- rbind(metros_1, brasilia_udh_haversine)
+metros_1 <- rbind(metros_1, teresina_udh_haversine)
+metros_1 <- rbind(metros_1, petrolina_juazeiro_udh_haversine)
+metros_1 <- rbind(metros_1, vale_do_rio_cuiaba_udh_haversine)
+metros_1 <- rbind(metros_1, vale_do_paraiba_e_litoral_norte_udh_haversine)
 
 metro_cities <- unique(metros_1$customer_city)
 
+
+# visuals
+ggplot(euclidean_metros[euclidean_metros$customer_city == "sao paulo (sp)",], aes(centroid_long, centroid_lat)) +
+  geom_point(col = "grey", size = 0.5) + geom_point(aes(udh.long, udh.lat), col = "firebrick") + 
+  ggtitle("Sao Paulo Olist cases (grey) overlaid with Census 2010 cases (red)") +
+  xlab("longitude") + ylab("Latitude") +
+  theme(text = element_text(family = "Times New Roman"))
 
 # split, prepare and merge (EXECUTE) ------------------------------------------
 non_metros_1 <- brazil_df %>%
@@ -1468,14 +1315,21 @@ non_metros_1 <- merge(non_metros_1,
                 all.x = TRUE)
 
 
-
+nu_metros <- metros_1 %>%
+  select(centroid_lat,
+         centroid_long,
+         udh.lat,
+         udh.long,
+         nn_dist,
+         customer_city)
 
 colSums(is.na(non_metros_1)) # only 149 NA whereas it was 876
 
+# For merged euclidean
 metros_1 <- metros_1 %>%
   select(
-    - index_other_data,
-    - X,
+    - index_other_data, 
+    - X,               
     - index,
     - local_index
   ) %>%
@@ -1495,6 +1349,40 @@ metros_1 <- metros_1 %>%
   filter(
     dist < 2 # to deal with extreme distances
   )
+# For haversine 
+metros_1 <- metros_1 %>%
+  select(
+    #- index_other_data, # for haversine
+    #- X,                # for haversine
+    - index#,            # for haversine
+    #- local_index       # for haversine
+  ) %>%
+  mutate(
+    `mc.População total 2010` = NA,
+    `mc.População rural 2010` = NA,
+    `mc.População urbana 2010` = NA,
+    `mc.IDHM 2010` = NA,
+    `mc.IDHM Educação 2010` = NA,
+    `mc.Taxa de analfabetismo - 25 anos ou mais de idade 2010` = NA,
+    `mc.Taxa de analfabetismo - 18 anos ou mais de idade 2010` = NA,
+    mc.urbanity = NA,
+    mc.rurality = NA,
+    mc.cumul_age_24 = NA,
+    mc.young_ratio = NA
+  ) %>%
+  filter(
+    dist < 2 # to deal with extreme distances
+  )
+
+
+
+
+
+
+
+
+
+
 
 # Put together both sides of the equation
 binded_df <- rbind(metros_1, non_metros_1)
