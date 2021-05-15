@@ -1107,29 +1107,58 @@ vale_do_paraiba_e_litoral_norte_udh_haversine <- haversine_function(brazil_df, v
 
 # New merge functions (RUN)
 sao_paulo_udh_merged <- udh_merge_ex_with_in(brazil_df, sp_udh, sao_paulo_metro_municips)
+sao_paulo_udh_merged$metro <- "sao_paulo"
 fortaleza_udh_merged <- udh_merge_ex_with_in(brazil_df, fortaleza_udh, fortaleza_metro_municips)
+fortaleza_udh_merged$metro <- "fortaleza"
 recife_udh_merged <- udh_merge_ex_with_in(brazil_df, recife_udh, recife_metro_municips)
+recife_udh_merged$metro <- "recife"
 rio_dj_udh_merged <- udh_merge_ex_with_in(brazil_df, rio_dj_udh, rio_dj_metro_municips)
+rio_dj_udh_merged$metro <- "rio_de_janeiro"
 salvador_udh_merged <- udh_merge_ex_with_in(brazil_df, salvador_udh, salvador_metro_municips)
+salvador_udh_merged$metro <- "salvador"
 porto_alegre_udh_merged <- udh_merge_ex_with_in(brazil_df, porto_alegre_udh, porto_alegre_metro_municips)
+porto_alegre_udh_merged$metro <- "porto_alegre"
 natal_udh_merged <- udh_merge_ex_with_in(brazil_df, natal_udh, natal_metro_municips)
+natal_udh_merged$metro <- "natal"
 maceio_udh_merged <- udh_merge_ex_with_in(brazil_df, maceio_udh, maceio_metro_municips)
+maceio_udh_merged$metro <- "maceio"
 belo_horizonte_udh_merged <- udh_merge_ex_with_in(brazil_df, belo_horizonte_udh, belo_horizonte_metro_municips)
+belo_horizonte_udh_merged$metro <- "belo_horizonte"
 campinas_udh_merged <- udh_merge_ex_with_in(brazil_df, campinas_udh, campinas_metro_municips)
+campinas_udh_merged$metro <- "campinas"
 curitiba_udh_merged <- udh_merge_ex_with_in(brazil_df, curitiba_udh, curitiba_metro_municips)
+curitiba_udh_merged$metro <- "curitiba"
 belem_udh_merged <- udh_merge_ex_with_in(brazil_df, belem_udh, belem_metro_municips)
+belem_udh_merged$metro <- "belem"
 goiania_udh_merged <- udh_merge_ex_with_in(brazil_df, goiania_udh, goiania_metro_municips)
+goiania_udh_merged$metro <- "goiania"
 grande_vitoria_udh_merged <- udh_merge_ex_with_in(brazil_df, grande_vitoria_udh, grande_vitoria_metro_municips)
+grande_vitoria_udh_merged$metro <- "grande_vitoria"
 florianopolis_udh_merged <- udh_merge_ex_with_in(brazil_df, florianopolis_udh, florianopolis_metro_municips)
+florianopolis_udh_merged$metro <- "florianopolis"
 manaus_udh_merged <- udh_merge_ex_with_in(brazil_df, manaus_udh, manaus_metro_municips)
+manaus_udh_merged$metro <- "manaus"
 sao_luis_udh_merged <- udh_merge_ex_with_in(brazil_df, sao_luis_udh, sao_luis_metro_municips)
+sao_luis_udh_merged$metro <- "sao_luis"
 sorocaba_udh_merged <- udh_merge_ex_with_in(brazil_df, sorocaba_udh, sorocaba_metro_municips)
+sorocaba_udh_merged$metro <- "sorocaba"
 baixada_santista_udh_merged <- udh_merge_ex_with_in(brazil_df, baixada_santista_udh, baixada_santista_metro_municips)
+baixada_santista_udh_merged$metro <- "baixada_santista"
 brasilia_udh_merged <- udh_merge_ex_with_in(brazil_df, brasilia_udh, brasilia_metro_municips) 
+brasilia_udh_merged$metro <- "brasilia"
 teresina_udh_merged <- udh_merge_ex_with_in(brazil_df, teresina_udh, teresina_metro_municips)
+teresina_udh_merged$metro <- "teresina"
 petrolina_juazeiro_udh_merged <- udh_merge_ex_with_in(brazil_df, petrolina_juazeiro_udh, petrolina_juazeiro_metro_municips )
+petrolina_juazeiro_udh_merged$metro <- "petrolina_juazeiro"
 vale_do_rio_cuiaba_udh_merged <- udh_merge_ex_with_in(brazil_df, vale_do_rio_cuiaba_udh, vale_do_rio_cuiaba_metro_municips)
+vale_do_rio_cuiaba_udh_merged$metro <- "vale_do_rio_cuiaba"
 vale_do_paraiba_e_litoral_norte_udh_merged <- udh_merge_ex_with_in(brazil_df, vale_do_paraiba_e_litoral_norte_udh, litoral_norte_metro_municips)
+vale_do_paraiba_e_litoral_norte_udh_merged$metro <- "litoral_norte"
+
+
+
+
+
 
 
 # Equilateral Approximation
@@ -1229,6 +1258,7 @@ metros_1_euclidean <- rbind(metros_1_euclidean, teresina_udh_merged)
 metros_1_euclidean <- rbind(metros_1_euclidean, petrolina_juazeiro_udh_merged)
 metros_1_euclidean <- rbind(metros_1_euclidean, vale_do_rio_cuiaba_udh_merged)
 metros_1_euclidean <- rbind(metros_1_euclidean, vale_do_paraiba_e_litoral_norte_udh_merged)
+metros_1_euclidean <- rbind(metros_1_euclidean, campinas_udh_merged)
 
 metro_cities_euclidean <- unique(metros_1_euclidean$customer_city)
 
@@ -1271,12 +1301,46 @@ metros_1 <- rbind(metros_1, vale_do_paraiba_e_litoral_norte_udh_haversine)
 metro_cities <- unique(metros_1$customer_city)
 
 
+note = expression(paste(italic("Note: "), "variation in longitude along latitude is not adjusted for in this graph."))
+
 # visuals
-ggplot(euclidean_metros[euclidean_metros$customer_city == "sao paulo (sp)",], aes(centroid_long, centroid_lat)) +
-  geom_point(col = "grey", size = 0.5) + geom_point(aes(udh.long, udh.lat), col = "firebrick") + 
-  ggtitle("Sao Paulo Olist cases (grey) overlaid with Census 2010 cases (red)") +
-  xlab("longitude") + ylab("Latitude") +
-  theme(text = element_text(family = "Times New Roman"))
+ggplot(metros_1_euclidean[metros_1_euclidean$metro == "rio_de_janeiro" & metros_1_euclidean$centroid_lat < -21.5,], aes(centroid_long, centroid_lat)) +
+  geom_point(col = "grey", size = 0.5) + geom_point(aes(udh.long, udh.lat), col = "firebrick", size = 0.85) + 
+  labs(title = expression(bold("Figure 2")),
+       subtitle = expression(italic("Rio de Janeiro Olist cases (grey) overlaid with Census 2010 cases (red)"))) +
+  xlab("Longitude in degrees using WGS84 (EPSG:4326)") + ylab("Latitude in degrees using WGS84 (EPSG:4326)") +
+  theme(text = element_text(family = "Times New Roman", size = 14), plot.caption = element_text(hjust = 0)) +
+  labs(caption = note)
+
+# Visuals for appendix
+
+ggplot(metros_1_euclidean[metros_1_euclidean$metro == "baixada_santista" & metros_1_euclidean$centroid_lat < -21.5,], aes(centroid_long, centroid_lat)) +
+  geom_point(col = "grey", size = 0.5) + geom_point(aes(udh.long, udh.lat), col = "firebrick", size = 0.85) + 
+  labs(title = expression(bold("Figure C2")),
+       subtitle = expression(italic("Baixada Santista Olist cases (grey) overlaid with Census 2010 cases (red)"))) +
+  xlab("Longitude in degrees using WGS84 (EPSG:4326)") + ylab("Latitude in degrees using WGS84 (EPSG:4326)") +
+  theme(text = element_text(family = "Times New Roman", size = 12), plot.caption = element_text(hjust = 0)) +
+  labs(caption = note)
+
+ggplot(metros_1_euclidean[metros_1_euclidean$metro == "baixada_santista" & metros_1_euclidean$centroid_lat < -21.5,], aes(centroid_long, centroid_lat)) +
+  geom_point(col = "grey", size = 0.5) + geom_point(aes(udh.long, udh.lat), col = "firebrick", size = 0.85) + 
+  labs(title = expression(bold("Figure C3")),
+       subtitle = expression(italic("Baixada Santista Olist cases (grey) overlaid with Census 2010 cases (red)"))) +
+  xlab("Longitude in degrees using WGS84 (EPSG:4326)") + ylab("Latitude in degrees using WGS84 (EPSG:4326)") +
+  theme(text = element_text(family = "Times New Roman", size = 12), plot.caption = element_text(hjust = 0)) +
+  labs(caption = note)
+
+
+
+ggplot(metros_1_euclidean[metros_1_euclidean$metro == "rio_de_janeiro" & metros_1_euclidean$centroid_lat < -21.5,], aes(centroid_long, centroid_lat)) +
+  geom_point(col = "grey", size = 0.5) + geom_point(aes(udh.long, udh.lat), col = "firebrick", size = 0.85) + 
+  labs(title = expression(bold("Figure C1")),
+       subtitle = expression(italic("Rio de Janeiro Olist cases (grey) overlaid with Census 2010 cases (red)"))) +
+  xlab("Longitude in degrees using WGS84 (EPSG:4326)") + ylab("Latitude in degrees using WGS84 (EPSG:4326)") +
+  theme(text = element_text(family = "Times New Roman", size = 12), plot.caption = element_text(hjust = 0)) +
+  labs(caption = note)
+
+
 
 # split, prepare and merge (EXECUTE) ------------------------------------------
 non_metros_1 <- brazil_df %>%
@@ -1304,7 +1368,8 @@ non_metros_1 <- non_metros_1 %>%
     udh.cumul_age_24 = NA,
     udh.young_ratio = NA,
     udh.lat = NA,
-    udh.long = NA
+    udh.long = NA,
+    metro = NA
   )
 
 
@@ -1315,18 +1380,10 @@ non_metros_1 <- merge(non_metros_1,
                 all.x = TRUE)
 
 
-nu_metros <- metros_1 %>%
-  select(centroid_lat,
-         centroid_long,
-         udh.lat,
-         udh.long,
-         nn_dist,
-         customer_city)
-
 colSums(is.na(non_metros_1)) # only 149 NA whereas it was 876
 
 # For merged euclidean
-metros_1 <- metros_1 %>%
+metros_1 <- metros_1_euclidean %>%
   select(
     - index_other_data, 
     - X,               
@@ -1349,6 +1406,9 @@ metros_1 <- metros_1 %>%
   filter(
     dist < 2 # to deal with extreme distances
   )
+
+
+
 # For haversine 
 metros_1 <- metros_1 %>%
   select(
@@ -1479,6 +1539,116 @@ absence_maxprice <- binded_df[is.na(binded_df$max_price) == TRUE,]
 
 
 write.csv(binded_df, 'full_geomerged_df_4_new.csv')
+write.csv(binded_df, "full_geomerged_df_4_new_new.csv")
+
+
+
+
+
+
+
+# Two 
+ggplot(binded_df, aes(x= new_idhm)) + 
+  geom_histogram(color="black", fill="coral", size = 0.1, bins = 40) + 
+  facet_wrap(~udh_indicator) +
+  xlim(0, 1.00) + 
+  labs(title = expression(bold("Figure 3")),
+       subtitle = expression(italic("Difference in frequencies of Human Development Indices between UDH (1) and municipal data (0) cases"))) +
+  xlab("Human Development Index associated with the location of the related to case") + ylab("Count") +
+  theme(text = element_text(family = "Times New Roman", size = 14),
+        plot.title = element_text(size = 14),
+        plot.subtitle = element_text(size = 14))
+
+ggplot(binded_df, aes(x= new_urbanity)) + 
+  geom_histogram(color="black", fill="coral", size = 0.1) + 
+  facet_wrap(~udh_indicator) +
+  labs(title = expression(bold("Figure 4")),
+       subtitle = expression(italic("Difference in frequencies of urbanicity cases between UDH (1) and municipal data (0) cases"))) +
+  xlab("Ratio of urban population to total population of a single spatial unit associated with a case") + ylab("Count") +
+  theme(text = element_text(family = "Times New Roman", size = 14),
+        plot.title = element_text(size = 14),
+        plot.subtitle = element_text(size = 14))
+
+
+library(geobr)
+state <- read_state(year=2010)
+# The one 
+note = expression(paste(italic("Note: "), "variation in longitude along latitude is not adjusted for in this graph."))
+
+ggplot() + geom_sf(data=state, 
+                   fill=(ifelse(state$name_region == "Norte", "deepskyblue", 
+                                ifelse(state$name_region == "Nordeste", "deepskyblue4",
+                                       ifelse(state$name_region == "Sul", "coral", 
+                                              ifelse(state$name_region == "Sudeste", "deeppink3", "chartreuse"))))), color="white", size=.15, show.legend = FALSE) +
+  labs(title = expression(bold("Figure 5")),
+       subtitle = expression(italic("Geographic locations of Olist dataset cases in Brazil's five administritave regions"))) +
+  theme_minimal() +
+  labs(caption = note) + 
+  theme(text = element_text(family = "Times New Roman", size = 14),
+        plot.title = element_text(size = 14),
+        plot.subtitle = element_text(size = 14),
+        plot.caption = element_text(hjust = 0)) +
+  annotate("text", x = -48, y = -31, label = "South", col = "coral1", family = "Times New Roman", fontface = "bold") +
+  annotate("text", x = -63, y = -18, label = "Centerwest", col = "chartreuse3", family = "Times New Roman", fontface = "bold") +
+  annotate("text", x = -47, y = 2.5, label = "North", col = "deepskyblue1", family = "Times New Roman", fontface = "bold") +
+  annotate("text", x = -32, y = -10, label = "Northeast", col = "deepskyblue4", family = "Times New Roman", fontface = "bold") +
+  annotate("text", x = -37, y = -22, label = "Southeast", col = "deeppink3", family = "Times New Roman", fontface = "bold") +
+  
+  xlab("Longitude in degrees using WGS84 (EPSG:4326)") + ylab("Latitude in degrees using WGS84 (EPSG:4326)") +
+  geom_point(aes(
+    y = brazil_df[brazil_df$centroid_lat < 10 & brazil_df$centroid_long < -30 ,]$centroid_lat, 
+    x =  brazil_df[brazil_df$centroid_lat < 10 & brazil_df$centroid_long < -30 ,]$centroid_long), size = 0.07) + theme(legend.position="bottom")
+
+
+# THE ONES TOO
+metros <- read_metro_area(2010)
+library(geobr)
+ggplot() +
+  geom_sf(data=metros[metros$name_metro == "RM São Paulo",], fill="steelblue", color="black", size=.2, show.legend = FALSE) +
+  labs(title = expression(bold("Figure 2")),
+       subtitle = expression(italic("Locations of Olist data cases in RM Sao Paulo (black) overlaid with 2010 census data (red)"))) +
+  theme_minimal() +
+  labs(caption = note) + 
+  theme(text = element_text(family = "Times New Roman", size = 14),
+        plot.title = element_text(size = 14),
+        plot.subtitle = element_text(size = 14),
+        plot.caption = element_text(hjust = 0)) +
+  xlab("Longitude in degrees using WGS84 (EPSG:4326)") + 
+  ylab("Latitude in degrees using WGS84 (EPSG:4326)") +
+  geom_point(aes(
+    y = metros_1_euclidean[metros_1_euclidean$metro == "sao_paulo"  & metros_1_euclidean$udh.lat < -23.2,]$centroid_lat, 
+    x =  metros_1_euclidean[metros_1_euclidean$metro == "sao_paulo"  & metros_1_euclidean$udh.lat < -23.2,]$centroid_long), col = "black", size = 0.01) +
+  geom_point(aes(
+    y = metros_1_euclidean[metros_1_euclidean$metro == "sao_paulo" & metros_1_euclidean$udh.lat < -23.2,]$udh.lat, 
+    x =  metros_1_euclidean[metros_1_euclidean$metro == "sao_paulo"  & metros_1_euclidean$udh.lat < -23.2,]$udh.long), col = "red", size = 0.2, shape = 23)
+
+
+
+
+
+
+# unique per category
+
+# emptyvec 
+cats <- as.character(levels(brazil_df$product_category_name))
+nrep <- rep(0, length(cats))
+prod_uniques <- as.data.frame( nrep, cats)
+prod_uniques$median_approx <- 0
+counter <- 1
+for (i in levels(brazil_df$product_category_name)) {
+  unique_ids_interm <- (brazil_df[brazil_df$product_category_name == i,]$product_id.y)
+  prices_interms <- merge(unique_ids_interm, brazil_df[, c("product_id.y", "max_price")])
+  median_interim <- median(price_interims)
+  prod_uniques[counter, 2] <- median_interim
+  prod_uniques[counter,1] <- length(unique(brazil_df[brazil_df$product_category_name == i,]$product_id.y))
+  
+  median_uniques <- unique(brazil_df[brazil_df$product_category_name == i,]$product_id.y)
+  
+  
+  counter <- counter + 1 
+}
+
+
 
 
 
