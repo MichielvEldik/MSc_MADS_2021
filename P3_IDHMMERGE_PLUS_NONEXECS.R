@@ -18,7 +18,7 @@ library(FNN)
 library(tmaptools)
 library(geosphere)
 library(sp)
-
+library(ggplot2)
 # ------------------------------- #
 # Cleaning and deriving variables # -------------------------------------------
 # ------------------------------- #
@@ -1274,7 +1274,7 @@ euclidean_metros <- metros_1_euclidean %>%
 colSums(is.na(non_metros_1)) # only 149 NA whereas it was 876
 
 
-# one subset for merged 
+# one subset for merged haversine
 metros_1 <- rbind(sao_paulo_udh_haversine, fortaleza_udh_haversine)
 metros_1 <- rbind(metros_1, recife_udh_haversine)
 metros_1 <- rbind(metros_1, rio_dj_udh_haversine)
@@ -1301,7 +1301,7 @@ metros_1 <- rbind(metros_1, vale_do_paraiba_e_litoral_norte_udh_haversine)
 metro_cities <- unique(metros_1$customer_city)
 
 
-note = expression(paste(italic("Note: "), "variation in longitude along latitude is not adjusted for in this graph."))
+note = expression(paste(italic("Note. "), "Variation in longitude along latitude is not adjusted for in this graph."))
 
 # visuals
 ggplot(metros_1_euclidean[metros_1_euclidean$metro == "rio_de_janeiro" & metros_1_euclidean$centroid_lat < -21.5,], aes(centroid_long, centroid_lat)) +
@@ -1527,7 +1527,7 @@ colSums(is.na(binded_df))
 neije <- binded_df %>%
   select(udh.Territorialidades, customer_city)
 
-
+# ... ? execute though!
 binded_df <- binded_df %>%
   mutate(udh.Territorialidades = as.character(udh.Territorialidades),
          customer_city = as.character(customer_city),
@@ -1539,6 +1539,7 @@ absence_maxprice <- binded_df[is.na(binded_df$max_price) == TRUE,]
 
 
 write.csv(binded_df, 'full_geomerged_df_4_new.csv')
+# this one
 write.csv(binded_df, "full_geomerged_df_4_new_new.csv")
 
 
@@ -1573,7 +1574,7 @@ ggplot(binded_df, aes(x= new_urbanity)) +
 library(geobr)
 state <- read_state(year=2010)
 # The one 
-note = expression(paste(italic("Note: "), "variation in longitude along latitude is not adjusted for in this graph."))
+note = expression(paste(italic("Note. "), "Variation in longitude along latitude is not adjusted for in this graph."))
 
 ggplot() + geom_sf(data=state, 
                    fill=(ifelse(state$name_region == "Norte", "deepskyblue", 
@@ -1622,31 +1623,6 @@ ggplot() +
     y = metros_1_euclidean[metros_1_euclidean$metro == "sao_paulo" & metros_1_euclidean$udh.lat < -23.2,]$udh.lat, 
     x =  metros_1_euclidean[metros_1_euclidean$metro == "sao_paulo"  & metros_1_euclidean$udh.lat < -23.2,]$udh.long), col = "red", size = 0.2, shape = 23)
 
-
-
-
-
-
-# unique per category
-
-# emptyvec 
-cats <- as.character(levels(brazil_df$product_category_name))
-nrep <- rep(0, length(cats))
-prod_uniques <- as.data.frame( nrep, cats)
-prod_uniques$median_approx <- 0
-counter <- 1
-for (i in levels(brazil_df$product_category_name)) {
-  unique_ids_interm <- (brazil_df[brazil_df$product_category_name == i,]$product_id.y)
-  prices_interms <- merge(unique_ids_interm, brazil_df[, c("product_id.y", "max_price")])
-  median_interim <- median(price_interims)
-  prod_uniques[counter, 2] <- median_interim
-  prod_uniques[counter,1] <- length(unique(brazil_df[brazil_df$product_category_name == i,]$product_id.y))
-  
-  median_uniques <- unique(brazil_df[brazil_df$product_category_name == i,]$product_id.y)
-  
-  
-  counter <- counter + 1 
-}
 
 
 

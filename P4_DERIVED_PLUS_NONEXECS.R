@@ -9,7 +9,15 @@ library(dplyr)
 
 
 input <- read.csv("full_geomerged_df_4_new.csv")
+input <- read.csv("full_geomerged_df_4_new_new.csv")
+
 brazil_df <- input
+
+
+
+
+
+
 
 # ------ #
 # Rename # ------------------------------------------------------------------- #
@@ -72,7 +80,9 @@ brazil_df <- brazil_df %>%
     review_sent_wknd = ifelse(
       review_sent_dow == "zo" | review_sent_dow == "za", 1, 0),
     review_answer_wknd = ifelse(
-      review_answer_dow == "zo" | review_answer_dow == "za", 1, 0)
+      review_answer_dow == "zo" | review_answer_dow == "za", 1, 0),
+    # Month for seasonality
+    review_sent_moy = month(review_creation_date, label = TRUE)
         )
 
 # Year as seperate variables
@@ -154,42 +164,42 @@ search_goods <- c("furniture_bedroom",
                   "pet_shop",
                   "housewares",
                   "books_technical",
-                  "books_general_interest"
+                  "toys",
+                  "books_general_interest",
+                  "stationery",
+                  ""
                  )
 
 experience_goods <- c("auto",
                       "food",
+                      "drinks",
                       "food_drink",
                       "home_appliances",
                       "home_appliances_2",
                       "fashio_female_clothing",
                       "fashion_male_clothing",
+                      "fashion_bags_accessories",
+                      "fashion_childrens_clothes",
+                      "fashion_sport",
+                      "fashion_shoes",
                       "security_and_services",
                       "telephony",
                       "la cuisine",
                       "arts_and_craftmanship",
                       "fashion_shoes",
                       "party_supplies",
-                      " "
+                      "musical_instruments",
+                      "computers",
+                      "construction_tools_tools",
+                      "construction_tools_garden"
                       
                      )
-
-credence_goods <- c("health_beauty",
-                    "diapers_and_hygiene",
-                    " "
-                   )
-
-not_sure <- c(" ",
-              " ",
-              " ",
-              " ",
-              " ",
-              " ")
 
 intimate <- c("baby",
               "perfumery",
               "diapers_and_hygiene",
-              "health_beauty")
+              "health_beauty",
+              "fashion_underwear_beach")
 
 
 
@@ -289,7 +299,7 @@ test_out <- brazil_df[
 
 # When order is delivered after the estimated date, we name it "order_issue"
 brazil_df <- brazil_df %>%
-  mutate(other_issue = ifelse(diff_est_deliv < 1, 1, 0))
+  mutate(other_issue = ifelse(diff_est_deliv > 1, 1, 0))
 
 
 # -------------- #
@@ -463,6 +473,6 @@ brazil_df[,cols_2] <- lapply(brazil_df[cols_2], function(x) as.integer(x))
 
 write.csv(brazil_df, "full_geomerged_df_5.csv")
 
-
+write.csv(brazil_df, "full_geomerged_df_5_new.csv")
 
 

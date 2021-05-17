@@ -21,6 +21,7 @@ library(plotly)
 
 # Load data ------------------------------------------------------------------ 
 input <- read.csv("full_geomerged_df_5.csv")
+input <- read.csv("full_geomerged_df_5_new.csv")
 brazil_df <- input
 
 # PART 1: DATA ENGINEERING
@@ -111,9 +112,23 @@ brazil_df <- brazil_df %>%
 colSums(is.na(brazil_df))
 
 
-# Month variable --------------------------------------------------------------
+# Categories ------------------------------------------------------------------
 
 
+
+
+# unique per category
+
+# emptyvec 
+cats <- as.character(levels(brazil_df$product_category_name))
+nrep <- rep(0, length(cats))
+prod_uniques <- as.data.frame( nrep, cats)
+prod_uniques$median_approx <- 0
+counter <- 1
+for (i in levels(brazil_df$product_category_name)) {
+  prod_uniques[counter,1] <- length(unique(brazil_df[brazil_df$product_category_name == i,]$product_id.y))
+  counter <- counter + 1 
+}
 
 
 # Work in progress above median variable -------------------------------------
@@ -166,9 +181,17 @@ center_scale <- function(x) {
 # apply it
 brazil_df$mc_new_idhm <- center_scale(brazil_df$new_idhm)
 brazil_df$mc_new_young_ratio <- center_scale(brazil_df$new_young_ratio)
+brazil_df$new_urbanity <- center_scale(brazil_df$new_urbanity)
 
 hist(brazil_df$mc_new_idhm)
 hist(brazil_df$mc_new_young_ratio)
+
+
+
+# FIX FUCKUP ------------------------------------------------------------------
+brazil_df <- brazil_df %>%
+  mutate(other_issue = ifelse(diff_est_deliv > 1, 1, 0))
+
 
 # PART 2: FIRST INSIGHTS
 ################################################################################
@@ -396,6 +419,13 @@ stargazer(hai, type = "text", align = TRUE)
 
 
 
+brazil_df <- brazil_df %>%
+  mutate(metro = ifelse(is.na(metro), paste(as.character(customer_state), "county", sep = "_"), 
+                        as.character(metro)))
+
+
+brazil_df <- brazil_df %>%
+  mutate(dec = ifelse(review_sent_moy == "dec", 1, 0))
 
 
 
@@ -458,7 +488,7 @@ manual_or <- probability_success / probability_failure # Checks out
 nested_null_model_1 <- glmer(
   formula = bef_message_bool ~ 1 + (1 | customer_city),
   family = binomial(link = "logit"),
-  data = train_pos,
+  data = brazil_df,
   control = glmerControl(
     optimizer = "bobyqa", 
     optCtrl = list(maxfun=2e5)
@@ -477,9 +507,9 @@ lrtest(nested_null_model_1, null_model) # nested model has better fit
 
 # (4.3.) Nested null model with city and state
 nested_null_model_2 <- glmer(
-  formula = bef_message_bool ~ 1 + (1 | customer_city) + (1 | customer_state),
+  formula = bef_message_bool ~ 1 + (1 | customer_city) + (1 | metro),
   family = binomial(link = "logit"),
-  data = train_pos,
+  data = brazil_df,
   control = glmerControl(
     optimizer = "bobyqa", 
     optCtrl = list(maxfun=2e5)
@@ -501,9 +531,9 @@ mean(all_intercepts$`(Intercept)`)
 dispersion_index <- sd(all_intercepts$`(Intercept)`) / mean(all_intercepts$`(Intercept)`)
 
 nested_null_model_3 <- glmer(
-  formula = bef_message_bool ~ 1 + (1 | customer_city) + (1 | customer_state) + (1 | udh_indicator),
+  formula = bef_message_bool ~ 1 + (1 | customer_city) + (1 | customer_state) + (1 | metro),
   family = binomial(link = "logit"),
-  data = train_pos,
+  data = brazil_df,
   control = glmerControl(
     optimizer = "bobyqa", 
     optCtrl = list(maxfun=2e5)
@@ -521,45 +551,72 @@ mean(all_intercepts$`(Intercept)`)
 
 
 # Comparison
-lrtest(nested_null_model_1, nested_null_model_2) # Multilevel 
+lrtest(nested_null_model_2, nested_null_model_3) # Multilevel 
 
 # FULL Comparisons
 stargazer(null_model, nested_null_model_1, nested_null_model_2,  type = "text", title = "Table 1. Results")
 
 
-# Logit full vs. mixed full ----------------------------------------------------
+levels(brazil_df$customer_state)
 
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------ 
+# Logit full nested vs. mixed full nested --------------------------------------
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # (4.4.) Fit model on full train
 full_model <- glm(formula = bef_message_bool 
                   ~ 1
                   + mc_new_idhm
                   + region
-                  + urbanity_disc
+                  + new_urbanity
                   + mc_new_young_ratio
                   + review_score
                   + year
-                  + udh_indicator
+                  + other_issue
                   + intimate_goods
                   + experience_goods
+                  + item_count_disc
                   + review_sent_wknd
                   + above_median*region,
-                  data = brazil_no_iss,
+                  data = broccoli,
                   family = binomial(link = "logit")
 )
 AIC(full_model)
 summary(full_model)
 vif(full_model)
+stargazer(full_model, type = "text")
+
+summary(lm(average_price ~ region, data = brazil_df))
+summary(lm(mc_new_idhm ~ max_price, data = brazil_df))
 
 
-nested_null_model_2 <- glmer(
-  formula = bef_message_bool ~ 1 + mc_new_idhm +(1 | customer_city) + (1 | customer_state),
+nested_null_model_3 <- glmer(
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + year
+  + dec
+  + intimate_goods
+  + item_count_disc
+  + experience_goods
+  + review_sent_wknd
+  + max_price_disc*region
+  + (1 | customer_city),
   family = binomial(link = "logit"),
-  data = train_pos,
+  data = brazil_df,
   control = glmerControl(
     optimizer = "bobyqa", 
     optCtrl = list(maxfun=2e5)
   )
 )
+summary(nested_null_model_3)
+
 icc(nested_null_model_2)
 
 used_data <- cbind(nested_null_model_2$model$bef_message_bool, fitted.values(nested_null_model_2))
@@ -571,6 +628,288 @@ hist(used_data$V3)
 
 
 
+
+nested_null_model_2 <- glmer( # FINAAALllllllllllllllll********
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + review_sent_moy
+  + year
+  + other_issue
+  + intimate_goods
+  + experience_goods
+  + item_count_disc
+  + review_sent_wknd
+  + above_median*region
+  + (1 | customer_city),
+  family = binomial(link = "logit"),
+  data = brazil_df,
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+summary(nested_null_model_2)
+stargazer(nested_null_model_2, type = "text", out = "brazil_full_out.txt")
+cc <- confint(nested_null_model_2,parm="beta_")  ## slow (~ 11 seconds)
+confint(nested_null_model_2,parm="beta_",method="Wald")  # Faster
+ctab <- cbind(est=fixef(gm1),cc)
+
+
+
+se <- sqrt(diag(vcov(nested_null_model_2)))
+# table of estimates with 95% CI
+tab <- cbind(Est = fixef(nested_null_model_2), 
+             LL = fixef(nested_null_model_2) - 1.96 * se, 
+             UL = fixef(nested_null_model_2) + 1.96 * se)
+print(exp(tab), digits=3)
+
+
+
+nested_null_model_2_metronly <- glmer( # metro_only
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + review_sent_moy
+  + year
+  + other_issue
+  + intimate_goods
+  + experience_goods
+  + item_count_disc
+  + review_sent_wknd
+  + above_median*region
+  + (1 | customer_city),
+  family = binomial(link = "logit"),
+  data = brazil_df[brazil_df$udh_indicator == 1,],
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+summary(nested_null_model_2_metronly)
+stargazer(nested_null_model_2_metronly, type = "html", out = "metronly.html")
+cc <- confint(nested_null_model_2_metronly,parm="beta_")  ## slow (~ 11 seconds)
+confint(nested_null_model_2_metronly,parm="beta_",method="Wald")  # Faster
+ctab <- cbind(est=fixef(gm1),cc)
+
+
+se <- sqrt(diag(vcov(nested_null_model_2_metronly)))
+# table of estimates with 95% CI
+tab <- cbind(Est = fixef(nested_null_model_2_metronly), 
+             LL = fixef(nested_null_model_2_metronly) - 1.96 * se, 
+             UL = fixef(nested_null_model_2_metronly) + 1.96 * se)
+print(exp(tab), digits=3)
+
+
+
+
+
+nested_null_model_2_nometro <- glmer( # non metro_only
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + review_sent_moy
+  + year
+  + other_issue
+  + intimate_goods
+  + experience_goods
+  + item_count_disc
+  + review_sent_wknd
+  + above_median*region
+  + (1 | customer_city),
+  family = binomial(link = "logit"),
+  data = brazil_df[brazil_df$udh_indicator == 0,],
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+
+summary(nested_null_model_2_nometro)
+stargazer(nested_null_model_2_nometro, type = "html", out = "notmetros.html")
+
+se <- sqrt(diag(vcov(nested_null_model_2_nometro)))
+# table of estimates with 95% CI
+tab <- cbind(Est = fixef(nested_null_model_2_nometro), LL = fixef(nested_null_model_2_nometro) - 1.96 * se, UL = fixef(nested_null_model_2_nometro) + 1.96 * se)
+print(exp(tab), digits=3)
+
+
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------ 
+# Validation -------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+makeLiftPlot <- function(Prediction, Evaluate, ModelName){
+  iPredictionsSorted <- sort(Prediction,index.return=T,decreasing=T)[2]$ix #extract the index order according to predicted 1's
+  CustomersSorted <- Evaluate[iPredictionsSorted] #sort the true behavior of customers according to predictions
+  SumChurnReal<- sum(Evaluate == 1) #total number of real 1's in the evaluation set
+  CustomerCumulative=seq(length(Evaluate))/length(Evaluate) #cumulative fraction of customers
+  ChurnCumulative=apply(matrix(CustomersSorted==1),2,cumsum)/SumChurnReal #cumulative fraction of 1's
+  ProbTD = sum(CustomersSorted[1:floor(length(Evaluate)*.1)]==1)/floor(length(Evaluate)*.1) #probability of 1 in 1st decile
+  ProbOverall = SumChurnReal / length(Evaluate) #overall probability of 1's
+  TDL = ProbTD / ProbOverall
+  GINI = sum((ChurnCumulative-CustomerCumulative)/(t(matrix(1,1,length(Evaluate))-CustomerCumulative)),na.rm=T)/length(Evaluate)
+  plot(CustomerCumulative,ChurnCumulative,type="l",main=paste("Lift curve of", ModelName),xlab="Cumulative fraction of customers (sorted by predicted probability of 1's)",ylab="Cumulative fraction of real 1's")
+  grid()
+  lines(c(0,1),c(0,1),col="blue",type="l",pch=22, lty=2)
+  legend(.66,.2,c("According to model","Random selection"),cex=0.8,  col=c("black","blue"), lty=1:2)
+  text(0.15,1,paste("TDL = ",round(TDL,2), "; GINI = ", round(GINI,2) ))
+  return(data.frame(TDL,GINI))
+}
+
+confusionMatrix(data = validation_df$pred_check_ins,
+                reference = validation_df$actual_check_ins,
+                positive = "yes",
+                mode = "everything")
+
+
+
+
+validate_full <- glmer( # FINAAAL
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + review_sent_moy
+  + year
+  + other_issue
+  + intimate_goods
+  + experience_goods
+  + item_count_disc
+  + review_sent_wknd
+  + above_median*region
+  + (1 | customer_city),
+  family = binomial(link = "logit"),
+  data = train,
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+
+
+validate_metro <- glmer( # FINAAAL
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + review_sent_moy
+  + year
+  + other_issue
+  + intimate_goods
+  + experience_goods
+  + item_count_disc
+  + review_sent_wknd
+  + above_median*region
+  + (1 | customer_city),
+  family = binomial(link = "logit"),
+  data = train[train$udh_indicator == 1,],
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+
+validate_non_metro <- glmer( # FINAAAL
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + review_sent_moy
+  + year
+  + other_issue
+  + intimate_goods
+  + experience_goods
+  + item_count_disc
+  + review_sent_wknd
+  + above_median*region
+  + (1 | customer_city),
+  family = binomial(link = "logit"),
+  data = train[train$udh_indicator == 0,],
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+
+
+
+
+
+
+validation_function <- function(fitted_model, test_set, multilevel, probability){
+  if (multilevel == 1)
+  {
+    probabilities <- fitted_model %>% predict(test_set, 
+                                              type = "response",
+                                              allow.new.levels = TRUE)
+  } 
+  else 
+  {
+    probabilities <- fitted_model %>% predict(test_set, 
+                                              type = "response",
+                                              allow.new.levels = FALSE)
+  }
+  # Perform classification based on probability
+  predicted.classes <- ifelse(probabilities > probability, 1, 0)
+  predicted.classes
+  
+  # bind 
+  probies <- cbind(as.character(test_set$bef_message_bool), predicted.classes)
+  probies <- as.data.frame(probies)
+  
+  probies <- probies %>%
+    mutate(true_positives = ifelse(V1 == "1" & predicted.classes == "1", 1, 0),
+           true_negatives = ifelse(V1 == "0" & predicted.classes == "0", 1, 0),
+           false_positives = ifelse(V1 == "0" & predicted.classes == "1", 1, 0),
+           false_negatives = ifelse(V1 == "1" & predicted.classes == "0", 1, 0),
+           hit_rate = ifelse(true_positives == "1" | true_negatives == "1", 1, 0)
+    )
+  
+  # Compute hitrate
+  hit_rate <- mean(probies$hit_rate, na.rm = TRUE)
+  
+  return(hit_rate)
+}
+
+
+
+validation_function(validate_full, test, 1, 0.50)
+validation_function(validate_metro, test[test$udh_indicator == 1,], 1, 0.55)
+validation_function(validate_non_metro, test[test$udh_indicator == 0,], 1, 0.55)
+
+actual <- test[test$udh_indicator == 1,]$bef_message_bool
+pred_prob_logit <- predict(validate_metro,
+                               newdata = test[test$udh_indicator == 1,],
+                               type = "response",
+                               allow.new.levels = TRUE)
+makeLiftPlot(pred_prob_logit, actual, "Logit")
+
+# ----------------------------------------------------------------------------
 
 plot(density(rstandard(full_prob_model, type='deviance')))
 lines(density(resid(m1, type='response')), col='red')
@@ -636,6 +975,143 @@ summary(neg_model)
 vif(neg_model)
 
 stargazer(pos_model, neg_model, type = "text")
+
+
+# HECKKKKIEEE ----------------------------------------------------------------
+
+
+
+heckie_seleccie_full <- glmer( # FINAAAL
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + review_sent_moy
+  + year
+  + other_issue
+  + intimate_goods
+  + experience_goods
+  + item_count_disc
+  + review_sent_wknd
+  + above_median*region
+  + (1 | customer_city),
+  family = binomial(link = "probit"),
+  data = brazil_df,
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+
+# both of these are the same but we go with predict()
+probit_lp = predict(heckie_seleccie_full)
+#probabilities <- model %>% predict(train, type = "response",allow.new.levels = TRUE)
+
+mills0 = dnorm(probit_lp)/pnorm(probit_lp) # this works correctly
+
+# Somewhat multimodal; is this a concern? 
+hist(mills0)
+
+
+brazil_df$mills <- mills0
+
+# Truncated fsys 
+truncated_brazil_df <- brazil_df[brazil_df$bef_message_bool == 1,]
+
+
+# Regular Negative binomial 
+basic_nb_full <- glm.nb(bef_nwords
+             ~  1
+             + mc_new_idhm
+             + mills
+             + region
+             + new_urbanity
+             + mc_new_young_ratio
+             + review_score
+             + review_sent_moy
+             + year
+             + other_issue
+             + intimate_goods
+             + experience_goods
+             + item_count_disc, 
+             data = truncated_brazil_df)
+summary(basic_nb_full)
+vif(m2)
+
+# Mixed effects NB
+ml_nb_full <- glmer.nb(bef_nwords ~ 1
+                 + mc_new_idhm
+                 + mills
+                 + region
+                 + new_urbanity
+                 + mc_new_young_ratio
+                 + review_score
+                 + review_sent_moy
+                 + year
+                 + other_issue
+                 + intimate_goods
+                 + experience_goods
+                 + item_count_disc
+                 + (1 | customer_city), data = truncated_brazil_df, verbose=TRUE)
+summary(m.nb)
+performance::icc(m.nb)
+
+
+
+# zero truncated
+m1 <- vglm(bef_nwords
+           ~  mc_new_idhm
+           + mills
+           + region
+           + new_urbanity
+           + mc_new_young_ratio
+           + review_score
+           + review_sent_moy
+           + year
+           + other_issue
+           + intimate_goods
+           + experience_goods
+           + item_count_disc
+           + review_sent_wknd, family = posnegbinomial(), data = truncated_brazil_df)
+summary(m1)
+
+
+
+
+# Metro
+# -----
+heckie_seleccie_metro <- glmer( #  METRO ONLY
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + review_sent_moy
+  + year
+  + other_issue
+  + intimate_goods
+  + experience_goods
+  + item_count_disc
+  + review_sent_wknd
+  + above_median*region
+  + (1 | customer_city),
+  family = binomial(link = "probit"),
+  data = brazil_df[brazil_df$udh_indicator == 1,],
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
+
+
+
+
+
 
 
 
