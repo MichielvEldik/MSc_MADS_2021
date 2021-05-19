@@ -133,7 +133,6 @@ for (i in levels(brazil_df$product_category_name)) {
 
 # Work in progress above median variable -------------------------------------
 
-
 all_names <- levels(brazil_df$product_category_name)
 
 hi <-brazil_df[brazil_df$product_category_name == all_names[1],]
@@ -338,8 +337,17 @@ ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) +
                 "southeast" = "southeast (n = 64,714)",
                 "full" = "full (n = 92,762)"))) 
 
-
-
+note = expression(paste(italic("Note. "), "Zero-length reviews were excluded from this plot."))
+ggplot(brazil_df[brazil_df$bef_message_bool == 1,], aes(x= bef_nwords)) + 
+  geom_histogram(color="black", fill="coral", size = 0.1, bins = 50) +
+  labs(caption = note) +
+  labs(title = expression(bold("Figure 7")),
+       subtitle = expression(italic("Distribution of Review Message Length Frequencies"))) +
+  xlab("Number of Words") + ylab("Count") +
+  theme(text = element_text(family = "Times New Roman", size = 18),
+        plot.title = element_text(size = 18),
+        plot.subtitle = element_text(size = 18),
+        plot.caption = element_text(hjust = 0))
 # sample table ----------------------------------------------------------------
 
 hai <- as.data.frame(brazil_df %>% 
@@ -658,7 +666,7 @@ stargazer(nested_null_model_2, type = "text", out = "brazil_full_out.txt")
 cc <- confint(nested_null_model_2,parm="beta_")  ## slow (~ 11 seconds)
 confint(nested_null_model_2,parm="beta_",method="Wald")  # Faster
 ctab <- cbind(est=fixef(gm1),cc)
-
+vif(nested_null_model_2)
 
 
 se <- sqrt(diag(vcov(nested_null_model_2)))
@@ -980,7 +988,7 @@ stargazer(pos_model, neg_model, type = "text")
 # HECKKKKIEEE ----------------------------------------------------------------
 
 
-
+vif(heckie_seleccie_full)
 heckie_seleccie_full <- glmer( # FINAAAL
   formula = bef_message_bool 
   ~ 1
@@ -1005,7 +1013,7 @@ heckie_seleccie_full <- glmer( # FINAAAL
     optCtrl = list(maxfun=2e5)
   )
 )
-
+summary(heckie_seleccie_full)
 # both of these are the same but we go with predict()
 probit_lp = predict(heckie_seleccie_full)
 #probabilities <- model %>% predict(train, type = "response",allow.new.levels = TRUE)
@@ -1021,48 +1029,9 @@ brazil_df$mills <- mills0
 # Truncated fsys 
 truncated_brazil_df <- brazil_df[brazil_df$bef_message_bool == 1,]
 
-
-# Regular Negative binomial 
-basic_nb_full <- glm.nb(bef_nwords
-             ~  1
-             + mc_new_idhm
-             + mills
-             + region
-             + new_urbanity
-             + mc_new_young_ratio
-             + review_score
-             + review_sent_moy
-             + year
-             + other_issue
-             + intimate_goods
-             + experience_goods
-             + item_count_disc, 
-             data = truncated_brazil_df)
-summary(basic_nb_full)
-vif(m2)
-
-# Mixed effects NB
-ml_nb_full <- glmer.nb(bef_nwords ~ 1
-                 + mc_new_idhm
-                 + mills
-                 + region
-                 + new_urbanity
-                 + mc_new_young_ratio
-                 + review_score
-                 + review_sent_moy
-                 + year
-                 + other_issue
-                 + intimate_goods
-                 + experience_goods
-                 + item_count_disc
-                 + (1 | customer_city), data = truncated_brazil_df, verbose=TRUE)
-summary(m.nb)
-performance::icc(m.nb)
-
-
-
+library(VGAM)
 # zero truncated
-m1 <- vglm(bef_nwords
+m1 <- vglm(bef_nwords # FULL BRAZIL
            ~  mc_new_idhm
            + mills
            + region
@@ -1074,9 +1043,126 @@ m1 <- vglm(bef_nwords
            + other_issue
            + intimate_goods
            + experience_goods
-           + item_count_disc
-           + review_sent_wknd, family = posnegbinomial(), data = truncated_brazil_df)
+           + item_count_disc, family = posnegbinomial(), data = truncated_brazil_df)
 summary(m1)
+coef(m1)
+coef(m1)[, "Std. Error"]
+stargazer(coeftest(m1), type = "html", out = "zerotrunc_full.html")
+AIC(m1)
+df.residual(m1)
+logLik(m1)
+exp(cbind(coef(m1), confint(m1))) # Odds ratios
+vif(m1)
+
+se <- sqrt(diag(vcov(m1)))
+# table of estimates with 95% CI
+tab <- cbind(Est = fixef(m1), LL = fixef(m1) - 1.96 * se, UL = fixef(m1) + 1.96 * se)
+print(exp(tab), digits=3)
+vcov(m1)
+residuals(m1)
+residuals(heckie_seleccie_full)
+
+
+
+
+predict(m1)
+
+
+
+hoi <- as.data.frame(cbind(residuals(heckie_seleccie_full), brazil_df$bef_message_bool))
+hoi$V2 <- hoi$V2 - 1
+hi <- hoi[hoi$V2 == 1,]
+
+hii <- cbind(hi, residuals(m1))
+
+
+library(ggExtra)
+scatter.hist(x=hii$`loglink(munb)`, y=hii$V1, density=TRUE, ellipse=TRUE)
+
+
+den3d <- kde2d(hii$`loglink(munb)`, hii$V1)
+persp(den3d, box=TRUE)
+
+den3d
+
+m1.1 <- vglm(bef_nwords # FULL BRAZIL
+           ~  mc_new_idhm
+           + mills
+           + region
+           + new_urbanity
+           + mc_new_young_ratio
+           + review_score
+           + review_sent_moy
+           + year
+           + other_issue
+           + intimate_goods
+           + experience_goods
+           + item_count_disc, family = posnegbinomial(), data = truncated_brazil_df[truncated_brazil_df$top2box == 1,])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+data_nb <- heckie_seleccie_full
+nrow(data_nb)
+nrow(truncated_brazil_df)
+summary(full_prob_model)
+# termplot(full_prob_model)
+
+used_data <- cbind(full_prob_model$model$bef_message_bool, fitted.values(full_prob_model))
+used_data <- as.data.frame(used_data)
+used_data <- used_data %>%
+  mutate(V3 = ifelse(V1 == 1, V1-V2, V2))
+# Only interested in deviance for "1" predictions
+
+used_data <- used_data[used_data$V1 == 1,]
+scatter.hist(x=truncated_brazil_df$`residuals(full_prob_model, type = "response")`, y=truncated_brazil_df$`residuals(m2)`, density=TRUE, ellipse=TRUE)
+
+
+
+
+
+den3d <- kde2d(truncated_brazil_df$`residuals(full_prob_model, type = "response")`, truncated_pos$`residuals(m2)`)
+persp(den3d, box=TRUE)
+
+
+
+
+
+m1_metros <- vglm(bef_nwords # FULL emtrosonly
+           ~  mc_new_idhm
+           + mills
+           + region
+           + new_urbanity
+           + mc_new_young_ratio
+           + review_score
+           + review_sent_moy
+           + year
+           + other_issue
+           + intimate_goods
+           + experience_goods
+           + above_median
+           + item_count_disc, family = posnegbinomial(), data = truncated_brazil_df[truncated_brazil_df$udh_indicator == 1,])
+summary(m1)
+coef(m1)
+coef(m1)[, "Std. Error"]
+stargazer(coeftest(m1), type = "html", out = "zerotrunc_full.html")
+Loglik(m1)
+library(ipeglim)
+
+
+
 
 
 
@@ -1131,9 +1217,8 @@ full_prob_model <- glm(formula = bef_message_bool
                        + year
                        + intimate_goods
                        + experience_goods
-                       + review_sent_wknd
-                       + above_median*region,
-                       data = train[train$udh_indicator == 0,],
+                       + review_sent_wknd,
+                       data = brazil_df[brazil_df$top2box == 1,],
                        family = binomial(link = "probit"))
 summary(full_prob_model)
 
@@ -1161,15 +1246,20 @@ truncated_train <- train[train$bef_message_bool == 1,]
 
 
 # Negative binomial 
-m2 <- glm.nb(bef_nwords
-             ~ mc_new_idhm
+m2 <- glm.nb(bef_nwords # FULL BRAZIL
+             ~  mc_new_idhm
              + mills
+             + region
+             + new_urbanity
              + mc_new_young_ratio
-             + urbanity_disc
-             + review_answer_wknd
              + review_score
-             + above_median*region, 
-             data = truncated_train)
+             + review_sent_moy
+             + year
+             + other_issue
+             + intimate_goods
+             + experience_goods
+             + item_count_disc, 
+             data = truncated_brazil_df)
 summary(m2)
 vif(m2)
 
@@ -1179,11 +1269,11 @@ hist(residuals(m2))
 
 truncated_pos <- cbind(truncated_pos, residuals(m2))
 
-res <- hexbin(truncated_pos$`residuals(full_prob_model, type = "response")`, truncated_pos$`residuals(m2)`, xbins=20)
+res <- hexbin(truncated_brazil_df$`residuals(full_prob_model, type = "response")`, truncated_brazil_df$`residuals(m2)`, xbins=20)
 plot(res)
 
 library(psych)
-scatter.hist(x=truncated_pos$`residuals(full_prob_model, type = "response")`, y=truncated_pos$`residuals(m2)`, density=TRUE, ellipse=TRUE)
+scatter.hist(x=truncated_brazil_df$`residuals(full_prob_model, type = "response")`, y=truncated_brazil_df$`residuals(m2)`, density=TRUE, ellipse=TRUE)
 
 cor(truncated_pos$`residuals(full_prob_model, type = "response")`, truncated_pos$`residuals(m2)`)
 
@@ -1203,6 +1293,7 @@ persp(den3d, box=TRUE)
 
 den3d <- kde2d(scale(truncated_pos$`residuals(full_prob_model, type = "response")`), scale(truncated_pos$`residuals(m2)`))
 
+library(plotly)
 plot_ly(x =den3d$x,
         y = den3d$y,
         z = den3d$z) %>% add_surface()
@@ -1230,7 +1321,7 @@ hist(truncated_pos$`residuals(full_prob_model, type = "response")`)
 # ---------------------------------------------------------------------------------
 data_nb <- m2$model
 nrow(data_nb)
-nrow(truncated_pos)
+nrow(truncated_brazil_df)
 summary(full_prob_model)
 # termplot(full_prob_model)
 
