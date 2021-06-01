@@ -188,6 +188,14 @@ hist(brazil_df$mc_new_young_ratio)
 
 
 
+stargazer(brazil_df[brazil_df$udh_indicator == 1,c("new_idhm", "new_young_ratio")],
+          brazil_df[brazil_df$udh_indicator == 0,c("new_idhm", "new_young_ratio")],
+          flip = TRUE,
+          type = "text")
+
+stargazer(summary(brazil_df[,"bef_message_bool"]), type = "text")
+
+
 # FIX FUCKUP ------------------------------------------------------------------
 brazil_df <- brazil_df %>%
   mutate(other_issue = ifelse(diff_est_deliv > 1, 1, 0))
@@ -208,6 +216,8 @@ more_than_2 <- more_than_2 %>%
 mean(more_than_2$two_or_one)
 mean(more_than_2$one)
 
+
+singletons <- brazil_df %>% group_by(customer_city)
 
 # Creating the big table ------------------------------------------------------
 
@@ -324,19 +334,22 @@ test <- c("", paste(as.character(round(new_vec[[1]], digits = 2)), "%", sep = ""
 ggplot(pop, aes(fill=bef_message_bool, y=n, x=hdi_class_col)) + 
   geom_bar(position="stack", stat="identity") +
   geom_text(size = 3.3, aes(label = test, family = "serif"), vjust = -1) + 
-  ylab("count (n)") +
-  theme_bw() +
+  ylab("count (n)") + 
   xlab("Human Development Index Category") +
+  theme_bw() + 
+  labs(title = expression(bold("Figure 6")),
+       subtitle = expression(italic("State Counts of HDI and Review Incidence Across Regions"))) +
+  labs(fill = "Review sent, yes (1) no (2)") + 
   theme(text=element_text(size=13,  family="serif")) +
   facet_wrap( ~ region, 
               scales = "free",
               labeller =labeller(region = c(
-                "centerwest" = "centerwest (n = 3,537)",
-                "north" = "north (n = 1,779)",
-                "northeast" = "northeast (n = 8,996)",
-                "south" = "south (n = 13,736)",
-                "southeast" = "southeast (n = 64,714)",
-                "full" = "full (n = 92,762)"))) 
+                "centerwest" = "Centerwest (n = 3,537)",
+                "north" = "North (n = 1,779)",
+                "northeast" = "Northeast (n = 8,996)",
+                "south" = "South (n = 13,736)",
+                "southeast" = "Southeast (n = 64,714)",
+                "full" = "Full (n = 92,762)"))) 
 
 
 
@@ -1062,6 +1075,7 @@ performance::icc(m.nb)
 
 
 # zero truncated
+library(VGAM)
 m1 <- vglm(bef_nwords
            ~  mc_new_idhm
            + mills
@@ -1074,11 +1088,12 @@ m1 <- vglm(bef_nwords
            + other_issue
            + intimate_goods
            + experience_goods
-           + item_count_disc
-           + review_sent_wknd, family = posnegbinomial(), data = truncated_brazil_df)
+           + item_count_disc, family = posnegbinomial(), data = truncated_brazil_df)
 summary(m1)
+coef(m1)
 
 
+forcat <- truncated_brazil_df %>% select(mc_new_idhm, mc_new_young_ratio, new_urbanity)
 
 
 # Metro
@@ -1108,8 +1123,67 @@ heckie_seleccie_metro <- glmer( #  METRO ONLY
   )
 )
 
+# both of these are the same but we go with predict()
+probit_lp = predict(heckie_seleccie_metro)
+#probabilities <- model %>% predict(train, type = "response",allow.new.levels = TRUE)
+
+mills0 = dnorm(probit_lp)/pnorm(probit_lp) # this works correctly
+
+# Somewhat multimodal; is this a concern? 
+hist(mills0)
 
 
+brazil_df[brazil_df$udh_indicator == 1,]$mills <- mills0
+
+# Truncated fsys 
+truncated_brazil_df <- brazil_df[brazil_df$bef_message_bool == 1 & brazil_df$udh_indicator == 1,]
+
+
+m1_metro <- vglm(bef_nwords
+           ~  mc_new_idhm
+           + mills
+           + region
+           + new_urbanity
+           + mc_new_young_ratio
+           + review_score
+           + review_sent_moy
+           + year
+           + other_issue
+           + intimate_goods
+           + experience_goods
+           + item_count_disc, family = posnegbinomial(), data = truncated_brazil_df)
+
+
+
+
+
+
+# Metro
+# -----
+heckie_seleccie_nonmetro <- glmer( #  nonMETRO ONLY
+  formula = bef_message_bool 
+  ~ 1
+  + mc_new_idhm
+  + region
+  + new_urbanity
+  + mc_new_young_ratio
+  + review_score
+  + review_sent_moy
+  + year
+  + other_issue
+  + intimate_goods
+  + experience_goods
+  + item_count_disc
+  + review_sent_wknd
+  + above_median*region
+  + (1 | customer_city),
+  family = binomial(link = "probit"),
+  data = brazil_df[brazil_df$udh_indicator == 0,],
+  control = glmerControl(
+    optimizer = "bobyqa", 
+    optCtrl = list(maxfun=2e5)
+  )
+)
 
 
 
